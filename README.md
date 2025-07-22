@@ -34,3 +34,19 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+
+----------------------------------------------------------
+
+Project Start Commands so far 
+# Build Project 
+npx create-next-app@15 minhas-financas-app --typescript
+cd minhas-financas-app/
+yarn add axios bulma sass swr yup
+yarn add -D @types/node@22.15.29 @types/react@19.1.6 @types/react-dom@19.1.5 eslint@9.28.0 eslint-config-next@15.3.3 typescript@5.8.3
+
+# LIBS 
+Bulma
+Axios 
+Yup 
+https://loading.io/css/

@@ -1,0 +1,72 @@
+/* src/styles/login.scss */
+
+.login-box {
+  background: white;
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+
+  width: 100%;
+  max-width: 400px;
+}
+
+.login-title {
+  color: #222;
+}
+
+.login-button {
+  background-color: var(--color-sky-light);
+  color: white;
+  transition: background-color 0.3s ease;
+}
+
+.login-button:hover {
+  background-color: var(--color-sky-dark);
+  color: white;
+}
+
+.is-link-text {
+  color: var(--color-sky-light);
+}
+
+.logo-login {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  margin-bottom: 0.5rem;
+}
+
+/* Section styling replicating inline style and Bulma flex utilities */
+.section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+/* Margin bottom 1.5rem for spacing */
+.mb-4 {
+  margin-bottom: 1.5rem;
+}
+
+/* Margin top 1.5rem */
+.mt-4 {
+  margin-top: 1.5rem;
+}
+
+/* Flexbox utilities for the checkbox and forgot link container */
+.field.is-flex.is-justify-content-space-between.is-align-items-center {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Small font size for forgot link */
+.is-size-7 {
+  font-size: 0.75rem;
+}
+
+/* Text center helper */
+.has-text-centered {
+  text-align: center;
+}

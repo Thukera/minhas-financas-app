@@ -1,0 +1,12 @@
+
+
+:root {
+  --color-sky-light: #91afbe;
+  --color-sky-dark: #0c4a6e;
+}
+
+body {
+  background: linear-gradient(135deg, var(--color-sky-light), var(--color-sky-dark));
+  min-height: 100vh;
+}
+
