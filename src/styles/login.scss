@@ -1,7 +1,7 @@
 /* src/styles/login.scss */
 
 .login-box {
-  background: white;
+  background: rgba(255, 255, 255, 0.966);
   border-radius: 1rem;
   padding: 2rem;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
@@ -12,6 +12,8 @@
 
 .login-title {
   color: #222;
+  font-weight: 600 !important; /* or whatever value you want */
+  
 }
 
 .login-button {
@@ -69,4 +71,24 @@
 /* Text center helper */
 .has-text-centered {
   text-align: center;
+}
+
+
+.control .label {
+    color: #222 !important;
+}
+
+.input, .textarea {
+  color: rgb(0, 0, 0) !important;
+  background-color: #ffffff !important;  /* or whatever you want */
+}
+
+/* Placeholder styling */
+.input::placeholder,
+.textarea::placeholder {
+  color: rgba(56, 56, 56, 0.6) !important; /* or a lighter/darker value for contrast */
+}
+
+#remenberMe{  
+  margin-right: 5px;
 }

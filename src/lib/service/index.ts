@@ -1,1 +1,1 @@
-// export service classes here
+export { useAuthService } from './auth.service'

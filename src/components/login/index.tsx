@@ -2,27 +2,64 @@
 
 import { Input } from '@/components/common/input';
 import * as yup from 'yup';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import '@/styles/login.scss';  // login styles only for login form
+import { Login } from '@/lib/models/login';
+import { useAuthService } from '@/lib/service';
+import { Alert } from '../common/message';
+import { Token } from '@/lib/models/token';
 
 const msgCampoObrigatorio = "Campo Obrigatorio"
 
 const validationSchema = yup.object().shape({
-    login: yup.string().trim().required(msgCampoObrigatorio),
-    senha: yup.string().trim().required(msgCampoObrigatorio)
+    username: yup.string().trim().required(msgCampoObrigatorio),
+    password: yup.string().trim().required(msgCampoObrigatorio)
 })
 
 interface LoginFormErros {
-    login?: string;
-    senha?: string;
+    username?: string;
+    password?: string;
 }
 
 export const LoginForm: React.FC = () => {
 
-    const [login, setLogin] = useState('')
-    const [senha, setSenha] = useState('')
-        const [errors, setErros] = useState<LoginFormErros>()
+    const service = useAuthService()
+    const [username, setUsername] = useState('')
+    const [password, setpassword] = useState('')
+    const [messages, setMessages] = useState<Array<Alert>>([])
+    const [errors, setErrors] = useState<LoginFormErros>()
+    const [token, setToken] = useState<Token>()
 
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();  // <-- Prevents the page reload
+        submit();            // <-- Your existing submit logic
+    };
+
+    const submit = () => {
+        const login: Login = {
+            username,
+            password
+        }
+        console.log(login)
+
+        validationSchema.validate({ username, password }, { abortEarly: false }).then(obj => {
+            setErrors({})
+            service
+                .signin(login)
+                .then(tokenResposta => {
+                    setToken(tokenResposta)
+                    console.log(token)
+                })
+        }).catch(err => {
+            const validationErrors: LoginFormErros = {};
+            if (err.inner) {
+                err.inner.forEach((e: any) => {
+                    validationErrors[e.path as keyof LoginFormErros] = e.message;
+                });
+            }
+            setErrors(validationErrors);
+        });
+    }
     return (
         <section className="section is-flex is-align-items-center is-justify-content-center">
             <div className="login-box box" >
@@ -31,45 +68,47 @@ export const LoginForm: React.FC = () => {
                     <h1 className="title is-4 login-title">Minhas Finanças</h1>
                 </div>
 
-                <form>
+                <form onSubmit={handleSubmit}>
                     <div className="field">
                         <div className="control">
                             <Input id='inputLogin'
                                 label='Login'
                                 //columnClasses='is-half'
-                                onChange={setLogin}
-                                value={login}
-                                placeholder="you@example.com"
-                                error={errors?.login}
+                                onChange={setUsername}
+                                value={username}
+                                placeholder="username"
+                                error={errors?.username}
                             />
                         </div>
                     </div>
 
                     <div className="field">
                         <div className="control">
-                                <Input id='inputSenha'
+                            <Input id='inputpassword'
                                 label='Password'
                                 //columnClasses='is-half'
-                                onChange={setSenha}
-                                value={senha}
-                                placeholder="you@example.com"
-                                error={errors?.senha}
-                             />
+                                onChange={setpassword}
+                                value={password}
+                                placeholder="password here"
+                                error={errors?.password}
+                            />
                         </div>
                     </div>
 
                     <div className="field is-flex is-justify-content-space-between is-align-items-center">
                         <label className="checkbox">
-                            <input type="checkbox" />
+                            <input id="remenberMe" type="checkbox" />
                             Remember me
                         </label>
                         <a href="#" className="is-link-text is-size-7">Forgot?</a>
                     </div>
 
                     <div className="field mt-4">
-                        <button className="button is-fullwidth login-button">
+                            {/* inputs here */}
+                            <button type="submit" className="button is-fullwidth login-button">Sign in</button>
+                        {/*  <button onClick={submit} className="button is-fullwidth login-button">
                             Sign in
-                        </button>
+                        </button> */}
                     </div>
                 </form>
 
