@@ -8,6 +8,7 @@ import { Login } from '@/lib/models/login';
 import { useAuthService } from '@/lib/service';
 import { Alert } from '../common/message';
 import { Token } from '@/lib/models/token';
+import { useRouter } from 'next/navigation';
 
 const msgCampoObrigatorio = "Campo Obrigatorio"
 
@@ -29,6 +30,7 @@ export const LoginForm: React.FC = () => {
     const [messages, setMessages] = useState<Array<Alert>>([])
     const [errors, setErrors] = useState<LoginFormErros>()
     const [token, setToken] = useState<Token>()
+    const router = useRouter();
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();  // <-- Prevents the page reload
@@ -49,6 +51,9 @@ export const LoginForm: React.FC = () => {
                 .then(tokenResposta => {
                     setToken(tokenResposta)
                     console.log(token)
+
+                    // Redirect to dashboard (or wherever you want)
+                    router.push('/home');
                 })
         }).catch(err => {
             const validationErrors: LoginFormErros = {};
@@ -58,6 +63,8 @@ export const LoginForm: React.FC = () => {
                 });
             }
             setErrors(validationErrors);
+            // Redirect to dashboard (or wherever you want)
+            router.push('/home');
         });
     }
     return (
@@ -104,8 +111,8 @@ export const LoginForm: React.FC = () => {
                     </div>
 
                     <div className="field mt-4">
-                            {/* inputs here */}
-                            <button type="submit" className="button is-fullwidth login-button">Sign in</button>
+                        {/* inputs here */}
+                        <button type="submit" className="button is-fullwidth login-button">Sign in</button>
                         {/*  <button onClick={submit} className="button is-fullwidth login-button">
                             Sign in
                         </button> */}

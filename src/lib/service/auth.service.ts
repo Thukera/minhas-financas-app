@@ -3,8 +3,8 @@ import { httpClient } from "../http";
 import { Login } from "../models/login";
 import { Token } from "../models/token";
 
-const signInEndpoint: string = "/signin"
-const signUpEndpoint: string = "/signup"
+const signInEndpoint: string = "api/auth/signin"
+const signUpEndpoint: string = "api/auth/signup"
 
 export const useAuthService = () => {
 
