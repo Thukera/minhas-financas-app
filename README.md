@@ -50,3 +50,4 @@ Bulma
 Axios 
 Yup 
 https://loading.io/css/
+lucide-react

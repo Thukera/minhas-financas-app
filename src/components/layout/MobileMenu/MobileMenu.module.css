@@ -1,0 +1,77 @@
+.navbar {
+  border-radius: 1rem;
+  position: relative;
+  background-color: #222;
+  padding: 0.5rem 1rem;
+}
+
+.leftLogo {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.leftLogo img {
+  border-radius: 50%;
+}
+
+.userMenu {
+  position: absolute;
+  right: 1rem;
+  top: 0.5rem;
+}
+
+.userButton {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.userDropdown {
+  position: absolute;
+  right: 0;
+  top: 36px;
+  background-color: #222;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  min-width: 120px;
+  z-index: 2000;
+}
+
+.userDropdown a {
+  display: block;
+  padding: 0.5rem 1rem;
+  color: white;
+  text-decoration: none;
+}
+
+.userDropdown hr {
+  margin: 0;
+  border-color: #444;
+}
+
+.dropdownMenu {
+  overflow: hidden;
+  border-radius: 0 0 0.5rem 0.5rem;
+  margin-top: 0.5rem;
+  transition: max-height 0.3s ease;
+  background-color: #222;
+}
+
+.dropdownMenu ul {
+  list-style: none;
+  padding: 0 1rem;
+  margin: 0;
+}
+
+.dropdownMenu li {
+  margin-bottom: 0.5rem;
+}
+
+.dropdownMenu a {
+  display: flex;
+  align-items: center;
+  color: white;
+  text-decoration: none;
+}

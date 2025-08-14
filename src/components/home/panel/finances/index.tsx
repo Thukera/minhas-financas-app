@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { getProgressStyle, formatDate } from "./finances";
 
-export const FinancesPanel: React.FC = () => {
+export const FinancesPanel: React.FC<{ titulo?: string }> = ({ titulo }) => {
     // Initialized with fixed values
     const [rendimentos] = useState(6680);
     const [despesas] = useState(2887.95);
@@ -40,10 +40,10 @@ export const FinancesPanel: React.FC = () => {
                     </small>
                 </span>
             </div>
-
             <p className="has-text-weight-bold is-size-4" style={{ paddingLeft: '1.5rem' }}>
                 {saldo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </p>
+
 
             <div style={{ width: "100%" }}>
                 <progress

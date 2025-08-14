@@ -1,34 +1,49 @@
-import React from "react";
-import { ReactNode } from 'react';
-import { Menu } from "./menu";
+"use client";
 
+import React, { ReactNode, useState, useEffect } from "react";
+import { DesktopMenu } from "./DesktopMenu";
+import { MobileMenu } from "./MobileMenu";
 
 interface LayoutProps {
-    titulo?: string;
-    children?: ReactNode;
+  children?: ReactNode;
 }
 
+export const Layout: React.FC<LayoutProps> = ({ children }) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-export const Layout: React.FC<LayoutProps> = (props: LayoutProps) => {
-    return (
-        <div className="app">
+  const desktopSidebarWidth = isCollapsed ? 60 : 200;
+  const mobileMenuHeight = 64;
 
-            <Menu />
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 769);
+    handleResize(); // initial
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
-            <div className="section">
-                <div className="card is-rounded px-4 has-background-dark">
-                    <header className="card-header">
-                        <p className="card-header-title has-text-white">
-                            {props.titulo}
-                        </p>
-                    </header>
-                    <div className="card-content">
-                        <div className="content has-text-white">
-                            {props.children}
-                        </div>
-                    </div>
-                </div>
-            </div>
+  return (
+    <div>
+      {/* Mobile menu */}
+      {isMobile && <MobileMenu />}
+
+      {/* Desktop sidebar */}
+      {!isMobile && <DesktopMenu isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />}
+
+      {/* Main content */}
+      <main
+        style={{
+          padding: "1rem",
+          transition: "margin-left 0.3s ease, margin-top 0.3s ease",
+          marginLeft: isMobile ? 0 : desktopSidebarWidth,
+          marginTop: isMobile ? mobileMenuHeight : 0,
+        }}
+        className="layout-main"
+      >
+        <div className="columns is-multiline">
+          {React.Children.map(children, (child) => child)}
         </div>
-    )
-}
+      </main>
+    </div>
+  );
+};
