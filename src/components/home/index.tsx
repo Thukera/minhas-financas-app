@@ -1,3 +1,5 @@
+"use client";
+
 import { Layout } from "../layout"
 import { DomicilePanel, FinancesPanel } from "./panel"
 import { Panel } from "../common/panel"
@@ -10,7 +12,7 @@ export const HomePage: React.FC = () => {
                 <FinancesPanel />
             </Panel>
 
-            <Panel title="Recorrentes">
+            <Panel title="Despesas">
 
                 <DomicilePanel
                     titulo="Residência"
@@ -22,40 +24,50 @@ export const HomePage: React.FC = () => {
                         { conta: "NET AP", valor: 111.79, vencimento: "10/07/2025", pago: true, responsavel: { name: "Thuk", avatarUrl: "/user.png" } },
                     ]}
                 />
+            </ Panel>
 
-                <hr />
+
+            <Panel title="Recorrentes">
                 <RecurrentPaymentsPanel
                     titulo="Pagamentos Recorrentes"
                     sections={[
                         {
-                            titulo: "Débito Automático",
+                            titulo: "Boleto",
                             items: [
                                 { descricao: "TIM", valor: 100.99, vencimento: "10/07/2025", pago: true },
+                                { descricao: "CURSO", valor: 500.0, vencimento: "10/06/2025", },
                             ],
                         },
                         {
-                            titulo: "Agendados",
+                            titulo: "Débito Automático",
                             items: [
                                 { descricao: "SEGURO CARTAO", valor: 5.37, vencimento: "15/06/2025", status: "agendado" },
-                                { descricao: "CURSO", valor: 500.0, vencimento: "10/06/2025" },
+
                             ],
                         },
                         {
-                            titulo: "Cartões",
+                            titulo: "DETRAN",
                             items: [
-                                { descricao: "ITAU Gold", valor: 1048.48, vencimento: "10/06/2025", pago: true },
-                                { descricao: "ITAU Platinum", valor: 3355.28, vencimento: "10/05/2025", pago: true },
-                                { descricao: "NUBANK", valor: 1969.76, vencimento: "10/05/2025" },
+                                { descricao: "IPVA", valor: 5.37, vencimento: "15/06/2025", status: "agendado" },
+
                             ],
-                        },
+                        }
                     ]}
                 />
 
-
             </Panel>
 
-            <Panel title="Outro Painel">
-                another panel
+            <Panel title="Crédito">
+                <RecurrentPaymentsPanel sections={[
+                    {
+                        titulo: "Cartões de Crédito",
+                        items: [
+                            { descricao: "ITAU Gold", valor: 1048.48, vencimento: "10/06/2025", pago: true },
+                            { descricao: "ITAU Platinum", valor: 3355.28, vencimento: "10/05/2025", pago: true },
+                            { descricao: "NUBANK", valor: 1969.76, vencimento: "10/05/2025" },
+                        ],
+                    },
+                ]} />
             </Panel>
         </Layout>
     )

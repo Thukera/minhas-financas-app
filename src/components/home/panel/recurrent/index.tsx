@@ -1,3 +1,6 @@
+"use client";
+
+import ResponsiveTable from "@/components/common/table";
 import React from "react";
 
 interface PaymentItem {
@@ -5,6 +8,8 @@ interface PaymentItem {
   valor?: number;
   vencimento: string;
   pago?: boolean;
+  parcela?: number;
+  totalParcelas?: number;
   status?: string; // e.g., "agendado"
 }
 
@@ -30,51 +35,28 @@ export const RecurrentPaymentsPanel: React.FC<RecurrentPaymentsPanelProps> = ({ 
 
   return (
     <div>
-      {/* {titulo && <label className="label has-text-white is-size-4">{titulo}</label>} */}
-
       <div className="table-container">
         {sections.map((section, idx) => (
           <div key={idx} style={{ marginBottom: "2rem" }}>
+
+            {/* Render <hr /> only if it's not the first section */}
+            {idx > 0 && <hr />}
+
             <h2 className="subtitle is-size-6 ">{section.titulo}</h2>
 
-            <table className="table is-fullwidth is-striped is-hoverable has-text-white">
-              <thead>
-                <tr>
-                  <th>DESCRIÇÃO</th>
-                  <th>VALOR</th>
-                  <th>VENCIMENTO</th>
-                  <th>PAGO</th>
-                </tr>
-              </thead>
-              <tbody>
-                {section.items.map((item, i) => (
-                  <tr key={i}>
-                    <td>{item.descricao}</td>
-                    <td>{formatCurrency(item.valor)}</td>
-                    <td>{item.vencimento}</td>
-                    <td style={{ textAlign: "center" }}>
-                      <input
-                        type="checkbox"
-                        checked={item.pago ?? false}
-                        readOnly
-                        style={{
-                          width: "18px",
-                          height: "18px",
-                          cursor: "default",
-                        }}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td><strong>TOTAL:</strong></td>
-                  <td><strong>{formatCurrency(calcTotal(section.items))}</strong></td>
-                  <td colSpan={2}></td>
-                </tr>
-              </tfoot>
-            </table>
+            <ResponsiveTable
+              columns={[
+                { key: "descricao", label: "DESCRIÇÃO" },
+                { key: "valor", label: "VALOR", render: (v) => formatCurrency(v) },
+                { key: "parcela", label: "Parcelas" },
+                { key: "vencimento", label: "VENCIMENTO" },
+              ]}
+              items={section.items}
+              calcTotal={(items) =>
+                items.reduce((sum, i) => sum + (i.valor ?? 0), 0)
+              }
+              highlightPaid={true}
+            />
           </div>
         ))}
       </div>

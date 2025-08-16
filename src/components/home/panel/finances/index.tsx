@@ -5,9 +5,9 @@ import { getProgressStyle, formatDate } from "./finances";
 
 export const FinancesPanel: React.FC<{ titulo?: string }> = ({ titulo }) => {
     // Initialized with fixed values
-    const [rendimentos] = useState(6680);
+    const [rendimentos] = useState(10000.00);
     const [despesas] = useState(2887.95);
-    const [credito] = useState(2820.07);
+    const [credito] = useState(3820.07);
 
     const limiteUtilizado = despesas + credito;
     const saldo = rendimentos - limiteUtilizado;
