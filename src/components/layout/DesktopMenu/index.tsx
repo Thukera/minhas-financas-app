@@ -1,7 +1,10 @@
+"use client";
+
 import React from "react";
 import { Home, House, DollarSign, CreditCard, ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react";
 import Image from "next/image";
 import styles from "./DesktopMenu.module.css";
+import Link from "next/link";
 
 
 interface DesktopMenuProps {
@@ -12,7 +15,7 @@ interface DesktopMenuProps {
 const links = [
   { name: "Rendimentos", icon: DollarSign, href: "#" },
   { name: "Compras", icon: ShoppingBag, href: "#" },
-  { name: "Residência", icon: House, href: "/home" },
+  { name: "Residência", icon: House, href: "/domicilio" },
   { name: "Crédito", icon: CreditCard, href: "/credito" },
 ];
 
@@ -33,11 +36,13 @@ export const DesktopMenu: React.FC<DesktopMenuProps> = ({ isCollapsed, setIsColl
 
       {/* Logo */}
       <div className={styles.logo}>
-        <img
-          src="/logo.png"
-          alt="logo"
-          style={{ width: isCollapsed ? 32 : "100%" }}
-        />
+        <Link href="/home">
+          <img
+            src="/logo.png"
+            alt="logo"
+            style={{ width: isCollapsed ? 32 : "100%" }}
+          />
+        </Link>
       </div>
 
       {/* Links */}
@@ -65,12 +70,12 @@ export const DesktopMenu: React.FC<DesktopMenuProps> = ({ isCollapsed, setIsColl
           style={{ borderRadius: "50%" }}
         />
         {!isCollapsed && (
-            <div>
-              <a href="#">Configurações</a>
-              <br />
-              <a href="/">Logout</a>
-            </div>
-          )}
+          <div>
+            <a href="#">Configurações</a>
+            <br />
+            <a href="/">Logout</a>
+          </div>
+        )}
       </div>
     </aside>
   );

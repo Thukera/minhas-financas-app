@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import { Home, House, DollarSign, CreditCard, ShoppingBag } from "lucide-react";
+import { Home, House, DollarSign, CreditCard, ShoppingBag, BadgeDollarSign } from "lucide-react";
 import styles from "./MobileMenu.module.css";
 
 export const MobileMenu: React.FC = () => {
@@ -40,6 +40,11 @@ export const MobileMenu: React.FC = () => {
       >
         <ul>
           <li>
+            <a href="#/home">
+              <BadgeDollarSign size={20} style={{ marginRight: "0.5rem" }} /> Inicio
+            </a>
+          </li>
+          <li>
             <a href="#">
               <DollarSign size={20} style={{ marginRight: "0.5rem" }} /> Rendimentos
             </a>
@@ -50,7 +55,7 @@ export const MobileMenu: React.FC = () => {
             </a>
           </li>
           <li>
-            <a href="/home">
+            <a href="/domicilio">
               <House size={20} style={{ marginRight: "0.5rem" }} /> Residência
             </a>
           </li>    

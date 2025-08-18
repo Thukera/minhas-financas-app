@@ -88,7 +88,7 @@ export const CreditPage: React.FC = () => {
                         <PieChart
                             data={[
                                 { title: "Used", value: usedLimit, color: "#eb1212ff" },
-                                { title: "Available", value: Math.max(activeCard.limit - usedLimit, 0), color: "#2bad11ff" },
+                                { title: "Available", value: Math.max(activeCard.limit - usedLimit, 0), color: "#54eb36ff" },
                             ]}
                             lineWidth={25}                // smaller donut
                             style={{ maxWidth: "360px", margin: "30px" }} // small size, centered
