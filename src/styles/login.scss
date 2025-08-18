@@ -11,9 +11,13 @@
 }
 
 .login-title {
-  color: #222;
+  color: #f8f6f6;
   font-weight: 600 !important; /* or whatever value you want */
   
+}
+
+div.control label.label {
+  color: #f8f6f6 !important;
 }
 
 .login-button {

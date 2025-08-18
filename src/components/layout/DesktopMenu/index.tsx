@@ -1,5 +1,5 @@
 import React from "react";
-import { Home, House, DollarSign, CreditCard, ChevronLeft, ChevronRight } from "lucide-react";
+import { Home, House, DollarSign, CreditCard, ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react";
 import Image from "next/image";
 import styles from "./DesktopMenu.module.css";
 
@@ -10,10 +10,10 @@ interface DesktopMenuProps {
 }
 
 const links = [
-  { name: "Home", icon: Home, href: "#" },
-  { name: "Residencia", icon: House, href: "#" },
-  { name: "Ganhos", icon: DollarSign, href: "#" },
-  { name: "Despesas", icon: CreditCard, href: "#" },
+  { name: "Rendimentos", icon: DollarSign, href: "#" },
+  { name: "Compras", icon: ShoppingBag, href: "#" },
+  { name: "Residência", icon: House, href: "/home" },
+  { name: "Crédito", icon: CreditCard, href: "/credito" },
 ];
 
 export const DesktopMenu: React.FC<DesktopMenuProps> = ({ isCollapsed, setIsCollapsed }) => {
@@ -64,7 +64,13 @@ export const DesktopMenu: React.FC<DesktopMenuProps> = ({ isCollapsed, setIsColl
           height={isCollapsed ? 24 : 48}
           style={{ borderRadius: "50%" }}
         />
-        {!isCollapsed && <p className="has-text-white mt-2">Admin</p>}
+        {!isCollapsed && (
+            <div>
+              <a href="#">Configurações</a>
+              <br />
+              <a href="/">Logout</a>
+            </div>
+          )}
       </div>
     </aside>
   );

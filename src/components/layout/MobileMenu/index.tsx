@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import { Home, House, DollarSign, CreditCard } from "lucide-react";
+import { Home, House, DollarSign, CreditCard, ShoppingBag } from "lucide-react";
 import styles from "./MobileMenu.module.css";
 
 export const MobileMenu: React.FC = () => {
@@ -25,9 +25,9 @@ export const MobileMenu: React.FC = () => {
 
           {isUserOpen && (
             <div className={styles.userDropdown}>
-              <a href="#">Admin</a>
+              <a href="#">Configurações</a>
               <hr />
-              <a href="#">Logout</a>
+              <a href="/">Logout</a>
             </div>
           )}
         </div>
@@ -41,22 +41,22 @@ export const MobileMenu: React.FC = () => {
         <ul>
           <li>
             <a href="#">
-              <Home size={20} style={{ marginRight: "0.5rem" }} /> Home
+              <DollarSign size={20} style={{ marginRight: "0.5rem" }} /> Rendimentos
             </a>
           </li>
           <li>
             <a href="#">
+              <ShoppingBag size={20} style={{ marginRight: "0.5rem" }} /> Compras
+            </a>
+          </li>
+          <li>
+            <a href="/home">
               <House size={20} style={{ marginRight: "0.5rem" }} /> Residência
             </a>
-          </li>
+          </li>    
           <li>
-            <a href="#">
-              <DollarSign size={20} style={{ marginRight: "0.5rem" }} /> Ganhos
-            </a>
-          </li>
-          <li>
-            <a href="#">
-              <CreditCard size={20} style={{ marginRight: "0.5rem" }} /> Despesas
+            <a href="/credito">
+              <CreditCard size={20} style={{ marginRight: "0.5rem" }} /> Crédito
             </a>
           </li>
         </ul>

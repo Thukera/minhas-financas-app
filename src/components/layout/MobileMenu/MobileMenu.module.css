@@ -1,5 +1,5 @@
 .navbar {
-  border-radius: 1rem;
+  /* border-radius: 1rem; */
   position: relative;
   background-color: #222;
   padding: 0.5rem 1rem;
@@ -17,8 +17,8 @@
 
 .userMenu {
   position: absolute;
-  right: 1rem;
-  top: 0.5rem;
+  right: 1.5rem;
+  top: 0.7rem;
 }
 
 .userButton {

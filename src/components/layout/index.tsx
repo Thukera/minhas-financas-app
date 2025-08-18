@@ -36,7 +36,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           padding: "1rem",
           transition: "margin-left 0.3s ease, margin-top 0.3s ease",
           marginLeft: isMobile ? 0 : desktopSidebarWidth,
-          marginTop: isMobile ? mobileMenuHeight : 0,
+          // marginTop: isMobile ? mobileMenuHeight : 0,
         }}
         className="layout-main"
       >

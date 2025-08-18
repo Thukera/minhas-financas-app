@@ -15,6 +15,7 @@ interface ResponsiveTableProps {
     totalLabel?: string;
     calcTotal?: (items: any[]) => number;
     highlightPaid?: boolean;
+    showPaidColumn?: boolean;
 }
 
 export const ResponsiveTable: React.FC<ResponsiveTableProps> = ({
@@ -23,6 +24,7 @@ export const ResponsiveTable: React.FC<ResponsiveTableProps> = ({
     totalLabel = "TOTAL",
     calcTotal,
     highlightPaid = true,
+    showPaidColumn = true, // default = true
 }) => {
     const [rows, setRows] = useState(items);
     const [openRow, setOpenRow] = useState<number | null>(null);
@@ -53,7 +55,7 @@ export const ResponsiveTable: React.FC<ResponsiveTableProps> = ({
     // always append pago as last column for desktop
     const finalColumns: Column[] = [
         ...columns,
-        ...(!columns.some(c => c.key === "pago")
+        ...(showPaidColumn && !columns.some(c => c.key === "pago")
             ? [{
                 key: "pago",
                 label: "PAGO",

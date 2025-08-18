@@ -1,0 +1,22 @@
+/* tabs.css */
+.tabs {
+  overflow-x: auto;
+  white-space: nowrap;
+  flex-wrap: nowrap;
+}
+
+.tabs ul {
+  display: flex;
+  flex-wrap: nowrap;
+}
+
+.tabs li {
+  flex: 0 0 auto;
+}
+
+/* make tabs small on mobile */
+@media (max-width: 768px) {
+  .tabs.is-medium {
+    font-size: 0.85rem; /* smaller font */
+  }
+}

@@ -69,8 +69,9 @@ export const LoginForm: React.FC = () => {
     }
     return (
         <section className="section is-flex is-align-items-center is-justify-content-center">
-            <div className="login-box box" >
-                <div className="has-text-centered mb-4">
+            <div className="login-box box has-background-dark " >
+                
+                <div className="has-text-centered mb-4 ">
                     {/* <img className="logo-login" src="logo.png" alt="logo">  */}
                     <h1 className="title is-4 login-title">Minhas Finanças</h1>
                 </div>

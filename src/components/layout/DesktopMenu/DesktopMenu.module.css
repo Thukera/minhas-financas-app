@@ -23,8 +23,12 @@
 .logo {
   text-align: center;
   margin-bottom: 1rem;
+}
+
+.logo img {
   max-width: 70px;
   transition: width 0.3s ease;
+  display: inline-block;  /* so text-align works */
 }
 
 .menuList {

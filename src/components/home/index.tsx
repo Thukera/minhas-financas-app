@@ -3,7 +3,7 @@
 import { Layout } from "../layout"
 import { DomicilePanel, FinancesPanel } from "./panel"
 import { Panel } from "../common/panel"
-import { RecurrentPaymentsPanel } from "./panel/recurrent"
+import { RecurrentPaymentsPanel } from "./panel/recurrent" 
 
 export const HomePage: React.FC = () => {
     return (
