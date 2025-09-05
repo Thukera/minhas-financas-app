@@ -5,7 +5,8 @@ import { Home, House, DollarSign, CreditCard, ChevronLeft, ChevronRight, Shoppin
 import Image from "next/image";
 import styles from "./DesktopMenu.module.css";
 import Link from "next/link";
-
+import { useRouter } from 'next/navigation';
+import { useAuthService } from "@/lib/service";
 
 interface DesktopMenuProps {
   isCollapsed: boolean;
@@ -20,6 +21,9 @@ const links = [
 ];
 
 export const DesktopMenu: React.FC<DesktopMenuProps> = ({ isCollapsed, setIsCollapsed }) => {
+  const { logout } = useAuthService();
+  const router = useRouter();
+
   return (
     <aside
       className={styles.aside}
@@ -73,7 +77,16 @@ export const DesktopMenu: React.FC<DesktopMenuProps> = ({ isCollapsed, setIsColl
           <div>
             <a href="#">Configurações</a>
             <br />
-            <a href="/">Logout</a>
+            <a
+              href="#"
+              onClick={async (e) => {
+                e.preventDefault();
+                await logout();
+                router.replace("/login");
+              }}
+            >
+              Logout
+            </a>
           </div>
         )}
       </div>

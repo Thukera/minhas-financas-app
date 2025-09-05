@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Panel } from "../common/panel";
 import { Layout } from "../layout";
 import { mockCards } from "@/lib/models/credit/card/mock/cards";
@@ -14,7 +15,18 @@ import { PieChart } from "react-minimal-pie-chart";
 const formatCurrency = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export const CreditPage: React.FC = () => {
+    const router = useRouter();
+    const [loading, setLoading] = useState(true);
     const [activeCard, setActiveCard] = useState<CreditCard>(mockCards[0]);
+
+    useEffect(() => {
+        const signed = localStorage.getItem("signed") === "true";
+        if (!signed) {
+            router.replace("/login");
+        } else {
+            setLoading(false);
+        }
+    }, []);
 
     // load sections for active card
     const sections = mockInvoices[activeCard.id] || [];

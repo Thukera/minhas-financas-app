@@ -1,10 +1,23 @@
 "use client";
-
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Panel } from "../common/panel"
 import { DomicilePanel } from "../home/panel"
 import { Layout } from "../layout"
 
 export const Domicilio: React.FC = () => {
+    const router = useRouter();
+        const [loading, setLoading] = useState(true);
+    
+        useEffect(() => {
+            const signed = localStorage.getItem("signed") === "true";
+            if (!signed) {
+                router.replace("/login");
+            } else {
+                setLoading(false);
+            }
+        }, []);
+
     return (
         <Layout>
 

@@ -1,19 +1,38 @@
-"use client";
-
+'use client';
+import { useEffect, useState } from 'react';
 import { Layout } from "../layout"
 import { DomicilePanel, FinancesPanel } from "./panel"
 import { Panel } from "../common/panel"
-import { RecurrentPaymentsPanel } from "./panel/recurrent" 
+import { RecurrentPaymentsPanel } from "./panel/recurrent"
+import { useAuthService } from '@/lib/service';
+import { useRouter } from 'next/navigation';
+
+
+interface HomePageProps {
+    signed: boolean;
+}
 
 export const HomePage: React.FC = () => {
+    const router = useRouter();
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const signed = localStorage.getItem("signed") === "true";
+        if (!signed) {
+            router.replace("/login");
+        } else {
+            setLoading(false);
+        }
+    }, []);
+
+    if (loading) return <div className="has-text-centered mt-6">Verifying login...</div>;
+    // render home page content
     return (
-        <Layout >
+        <Layout>
             <Panel title="Painel Financeiro">
                 <FinancesPanel />
             </Panel>
-
             <Panel title="Despesas">
-
                 <DomicilePanel
                     titulo="Residência"
                     items={[
@@ -24,9 +43,7 @@ export const HomePage: React.FC = () => {
                         { conta: "NET AP", valor: 111.79, vencimento: "10/07/2025", pago: true, responsavel: { name: "Thuk", avatarUrl: "/user.png" } },
                     ]}
                 />
-            </ Panel>
-
-
+            </Panel>
             <Panel title="Recorrentes">
                 <RecurrentPaymentsPanel
                     titulo="Pagamentos Recorrentes"
@@ -42,21 +59,17 @@ export const HomePage: React.FC = () => {
                             titulo: "Débito Automático",
                             items: [
                                 { descricao: "SEGURO CARTAO", valor: 5.37, vencimento: "15/06/2025", status: "agendado" },
-
                             ],
                         },
                         {
                             titulo: "DETRAN",
                             items: [
                                 { descricao: "IPVA", valor: 5.37, vencimento: "15/06/2025", status: "agendado" },
-
                             ],
                         }
                     ]}
                 />
-
             </Panel>
-
             <Panel title="Crédito">
                 <RecurrentPaymentsPanel sections={[
                     {

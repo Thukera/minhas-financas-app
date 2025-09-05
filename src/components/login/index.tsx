@@ -2,12 +2,11 @@
 
 import { Input } from '@/components/common/input';
 import * as yup from 'yup';
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react'; // Use effect , update the project to check if already have a token on cookie
 import '@/styles/login.scss';  // login styles only for login form
 import { Login } from '@/lib/models/login';
 import { useAuthService } from '@/lib/service';
-import { Alert } from '../common/message';
-import { Token } from '@/lib/models/token';
+import { Alert, Message } from '../common/message';
 import { useRouter } from 'next/navigation';
 
 const msgCampoObrigatorio = "Campo Obrigatorio"
@@ -25,52 +24,61 @@ interface LoginFormErros {
 export const LoginForm: React.FC = () => {
 
     const service = useAuthService()
+    const [rememberMe, setRememberMe] = useState(false);
     const [username, setUsername] = useState('')
     const [password, setpassword] = useState('')
     const [messages, setMessages] = useState<Array<Alert>>([])
     const [errors, setErrors] = useState<LoginFormErros>()
-    const [token, setToken] = useState<Token>()
     const router = useRouter();
+
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();  // <-- Prevents the page reload
         submit();            // <-- Your existing submit logic
     };
 
-    const submit = () => {
-        const login: Login = {
-            username,
-            password
-        }
-        console.log(login)
+    const submit = async () => {
+        const login: Login = { username, password }
 
-        validationSchema.validate({ username, password }, { abortEarly: false }).then(obj => {
-            setErrors({})
-            service
-                .signin(login)
-                .then(tokenResposta => {
-                    setToken(tokenResposta)
-                    console.log(token)
+        try {
+            // Validate form
+            await validationSchema.validate({ username, password }, { abortEarly: false });
+            setErrors({}); // clear previous errors
 
-                    // Redirect to dashboard (or wherever you want)
-                    router.push('/home');
-                })
-        }).catch(err => {
-            const validationErrors: LoginFormErros = {};
+            // Call signin service
+            const signed = await service.signin(login);
+            if (signed) {
+                console.log("Signed : {}" , signed)
+                router.push("/home");
+            } else {
+                setMessages([{
+                    tipo: "danger",
+                    texto: "Usuário ou Senha Inválidos!"
+                }]);
+            }
+        } catch (err: any) {
             if (err.inner) {
+                // Validation errors
+                const validationErrors: LoginFormErros = {};
                 err.inner.forEach((e: any) => {
                     validationErrors[e.path as keyof LoginFormErros] = e.message;
                 });
+                setErrors(validationErrors);
+            } else {
+                // Network / other errors
+                console.error(err);
+                setMessages([{
+                    tipo: "danger",
+                    texto: "Um erro inesperado aconteceu, tente novamente mais tarde."
+                }]);
             }
-            setErrors(validationErrors);
-            // Redirect to dashboard (or wherever you want)
-            router.push('/home');
-        });
+        }
     }
+
     return (
         <section className="section is-flex is-align-items-center is-justify-content-center">
             <div className="login-box box has-background-dark " >
-                
+
                 <div className="has-text-centered mb-4 ">
                     {/* <img className="logo-login" src="logo.png" alt="logo">  */}
                     <h1 className="title is-4 login-title">Minhas Finanças</h1>
@@ -99,13 +107,14 @@ export const LoginForm: React.FC = () => {
                                 value={password}
                                 placeholder="password here"
                                 error={errors?.password}
+                                type='password'
                             />
                         </div>
                     </div>
 
                     <div className="field is-flex is-justify-content-space-between is-align-items-center">
                         <label className="checkbox">
-                            <input id="remenberMe" type="checkbox" />
+                            <input id="rememberMe" type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
                             Remember me
                         </label>
                         <a href="#" className="is-link-text is-size-7">Forgot?</a>
@@ -118,6 +127,15 @@ export const LoginForm: React.FC = () => {
                             Sign in
                         </button> */}
                     </div>
+
+                    {messages.map((msg, index) => (
+                        <Message
+                            key={index}
+                            texto={msg.texto}
+                            tipo={msg.tipo}
+                            field={msg.field ?? undefined}
+                        />
+                    ))}
                 </form>
 
                 <p className="has-text-centered is-size-7 mt-4">

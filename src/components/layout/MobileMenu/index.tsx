@@ -4,10 +4,14 @@ import React, { useState } from "react";
 import Image from "next/image";
 import { Home, House, DollarSign, CreditCard, ShoppingBag, BadgeDollarSign } from "lucide-react";
 import styles from "./MobileMenu.module.css";
+import { useRouter } from 'next/navigation';
+import { useAuthService } from "@/lib/service";
 
 export const MobileMenu: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserOpen, setIsUserOpen] = useState(false);
+  const { logout } = useAuthService();
+  const router = useRouter();
 
   return (
     <nav className={`navbar is-hidden-tablet ${styles.navbar}`}>
@@ -27,7 +31,16 @@ export const MobileMenu: React.FC = () => {
             <div className={styles.userDropdown}>
               <a href="#">Configurações</a>
               <hr />
-              <a href="/">Logout</a>
+              <a
+              href="#"
+              onClick={async (e) => {
+                e.preventDefault();
+                await logout();
+                router.replace("/login");
+              }}
+            >
+              Logout
+            </a>
             </div>
           )}
         </div>
