@@ -6,12 +6,24 @@ import { Home, House, DollarSign, CreditCard, ShoppingBag, BadgeDollarSign } fro
 import styles from "./MobileMenu.module.css";
 import { useRouter } from 'next/navigation';
 import { useAuthService } from "@/lib/service";
+import { User } from "@/lib/models/user";
+
 
 export const MobileMenu: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserOpen, setIsUserOpen] = useState(false);
+  const [username, setUsername] = useState(false);
+  const [id, setid] = useState(false);
+  const [profilePicturePath, setprofilePicturePath] = useState(false);
+
   const { logout } = useAuthService();
   const router = useRouter();
+
+  const user: User = {
+        username : "Lucy",
+        id : 3,
+        profilePicturePath : "user.png"
+  }
 
   return (
     <nav className={`navbar is-hidden-tablet ${styles.navbar}`}>
@@ -24,7 +36,7 @@ export const MobileMenu: React.FC = () => {
       <div className={styles.userMenu}>
         <div style={{ position: "relative" }}>
           <button className={styles.userButton} onClick={() => setIsUserOpen(!isUserOpen)}>
-            <Image src="/user.png" alt="User" width={32} height={32} style={{ borderRadius: "50%" }} />
+            <Image src="user.png" alt="User" width={32} height={32} style={{ borderRadius: "50%" }} />
           </button>
 
           {isUserOpen && (

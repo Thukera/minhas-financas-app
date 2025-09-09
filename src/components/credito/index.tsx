@@ -10,6 +10,7 @@ import { CreditCard } from "@//lib/models/credit/card"
 import ResponsiveTable from "@/components/common/table";
 import "./tabs.css";
 import { PieChart } from "react-minimal-pie-chart";
+import { User } from '@/lib/models/user';
 
 // helper
 const formatCurrency = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -18,6 +19,8 @@ export const CreditPage: React.FC = () => {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [activeCard, setActiveCard] = useState<CreditCard>(mockCards[0]);
+
+
 
     useEffect(() => {
         const signed = localStorage.getItem("signed") === "true";

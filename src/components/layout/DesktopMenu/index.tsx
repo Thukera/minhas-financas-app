@@ -7,6 +7,8 @@ import styles from "./DesktopMenu.module.css";
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import { useAuthService } from "@/lib/service";
+import { User } from "@/lib/models/user";
+import { useState } from "react";
 
 interface DesktopMenuProps {
   isCollapsed: boolean;
@@ -20,8 +22,15 @@ const links = [
   { name: "Crédito", icon: CreditCard, href: "/credito" },
 ];
 
+ const user: User = {
+        username : "Lucy",
+        id : 3,
+        profilePicturePath : "lucy.png"
+  }
+
 export const DesktopMenu: React.FC<DesktopMenuProps> = ({ isCollapsed, setIsCollapsed }) => {
   const { logout } = useAuthService();
+  const [src, setSrc] = useState(`${process.env.NEXT_PUBLIC_API_URL}/uploads/${user.profilePicturePath}`);
   const router = useRouter();
 
   return (
@@ -67,11 +76,12 @@ export const DesktopMenu: React.FC<DesktopMenuProps> = ({ isCollapsed, setIsColl
       {/* User Photo */}
       <div className={styles.userContainer}>
         <Image
-          src="/user.png"
+          src={src}
           alt="User"
           width={isCollapsed ? 24 : 48}
           height={isCollapsed ? 24 : 48}
           style={{ borderRadius: "50%" }}
+          onError={() => setSrc("/user.png")} // fallback to public folder
         />
         {!isCollapsed && (
           <div>
