@@ -48,6 +48,7 @@ export const LoginForm: React.FC = () => {
             // Call signin service
             const signed = await service.signin(login);
             if (signed) {
+                console.log(document.cookie);
                 console.log("Signed : {}" , signed)
                 router.push("/home");
             } else {

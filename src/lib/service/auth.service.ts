@@ -2,7 +2,7 @@ import { AxiosResponse } from "axios";
 import { httpClient } from "../http";
 import { Login } from "../models/login";
 
-const signInEndpoint: string = "api/auth/signin";
+const signInEndpoint: string = "api/cookie/signin";
 const refreshEndpoint: string = "api/cookie/refresh";
 
 export const useAuthService = () => {

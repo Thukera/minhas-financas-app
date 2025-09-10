@@ -8,7 +8,8 @@ import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import { useAuthService } from "@/lib/service";
 import { User } from "@/lib/models/user";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { usePanelService } from '@/lib/service';
 
 interface DesktopMenuProps {
   isCollapsed: boolean;
@@ -22,17 +23,40 @@ const links = [
   { name: "Crédito", icon: CreditCard, href: "/credito" },
 ];
 
- const user: User = {
-        username : "Lucy",
-        id : 3,
-        profilePicturePath : "lucy.png"
-  }
+
 
 export const DesktopMenu: React.FC<DesktopMenuProps> = ({ isCollapsed, setIsCollapsed }) => {
   const { logout } = useAuthService();
-  const [src, setSrc] = useState(`${process.env.NEXT_PUBLIC_API_URL}/uploads/${user.profilePicturePath}`);
+  const { getUserDetails } = usePanelService();
   const router = useRouter();
 
+  const [user, setUser] = useState<User | null>(null);
+  const [src, setSrc] = useState("/user.png"); // default fallback
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const fetchedUser = await getUserDetails();
+        if (!fetchedUser) {
+          router.replace("/login"); // redirect if API fails
+          return;
+        }
+        setUser(fetchedUser);
+        setSrc(`${process.env.NEXT_PUBLIC_API_URL}/uploads/${fetchedUser.profilePicturePath}`);
+      } catch (error) {
+        console.error("Failed to fetch user", error);
+        localStorage.removeItem("signed");
+        router.replace("/login");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
+  }, [getUserDetails, router]);
+
+  if (loading) return null; // or a loading spinner
   return (
     <aside
       className={styles.aside}
