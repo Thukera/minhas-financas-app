@@ -1,15 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Home, House, DollarSign, CreditCard, ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react";
 import Image from "next/image";
-import styles from "./DesktopMenu.module.css";
 import Link from "next/link";
-import { useRouter } from 'next/navigation';
+import { useRouter } from "next/navigation";
+import styles from "./DesktopMenu.module.css";
 import { useAuthService } from "@/lib/service";
-import { User } from "@/lib/models/user";
-import { useState, useEffect } from "react";
-import { usePanelService } from '@/lib/service';
+import { useUser } from "@/context/userContext";
 
 interface DesktopMenuProps {
   isCollapsed: boolean;
@@ -23,45 +21,22 @@ const links = [
   { name: "Crédito", icon: CreditCard, href: "/credito" },
 ];
 
-
-
 export const DesktopMenu: React.FC<DesktopMenuProps> = ({ isCollapsed, setIsCollapsed }) => {
   const { logout } = useAuthService();
-  const { getUserDetails } = usePanelService();
+  const { user, loading } = useUser();
   const router = useRouter();
 
-  const [user, setUser] = useState<User | null>(null);
-  const [src, setSrc] = useState("/user.png"); // default fallback
-  const [loading, setLoading] = useState(true);
+  const [src, setSrc] = useState("/user.png"); // fallback image
 
+  // Update avatar src when user is loaded
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const fetchedUser = await getUserDetails();
-        if (!fetchedUser) {
-          router.replace("/login"); // redirect if API fails
-          return;
-        }
-        setUser(fetchedUser);
-        setSrc(`${process.env.NEXT_PUBLIC_API_URL}/uploads/${fetchedUser.profilePicturePath}`);
-      } catch (error) {
-        console.error("Failed to fetch user", error);
-        localStorage.removeItem("signed");
-        router.replace("/login");
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (user?.profilePicturePath) {
+      setSrc(`${process.env.NEXT_PUBLIC_API_URL}/uploads/${user.profilePicturePath}`);
+    }
+  }, [user]);
 
-    fetchUser();
-  }, [getUserDetails, router]);
-
-  if (loading) return null; // or a loading spinner
   return (
-    <aside
-      className={styles.aside}
-      style={{ width: isCollapsed ? 60 : 200 }}
-    >
+    <aside className={styles.aside} style={{ width: isCollapsed ? 60 : 200 }}>
       {/* Collapse Toggle */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
@@ -74,20 +49,20 @@ export const DesktopMenu: React.FC<DesktopMenuProps> = ({ isCollapsed, setIsColl
       {/* Logo */}
       <div className={styles.logo}>
         <Link href="/home">
-          <img
-            src="/logo.png"
-            alt="logo"
-            style={{ width: isCollapsed ? 32 : "100%" }}
-          />
+          <img src="/logo.png" alt="logo" style={{ width: isCollapsed ? 32 : "100%" }} />
         </Link>
       </div>
 
-      {/* Links */}
+      {/* Menu Links */}
       <ul className={styles.menuList}>
         {links.map((link) => {
           const Icon = link.icon;
           return (
-            <li key={link.name} className={styles.menuItem} style={{ justifyContent: isCollapsed ? "center" : "flex-start" }}>
+            <li
+              key={link.name}
+              className={styles.menuItem}
+              style={{ justifyContent: isCollapsed ? "center" : "flex-start" }}
+            >
               <a href={link.href} title={isCollapsed ? link.name : undefined} style={{ display: "flex", alignItems: "center" }}>
                 <Icon size={!isCollapsed ? 28 : 20} style={{ marginRight: isCollapsed ? 0 : "0.5rem" }} />
                 {!isCollapsed && link.name}
@@ -97,7 +72,7 @@ export const DesktopMenu: React.FC<DesktopMenuProps> = ({ isCollapsed, setIsColl
         })}
       </ul>
 
-      {/* User Photo */}
+      {/* User Info */}
       <div className={styles.userContainer}>
         <Image
           src={src}
@@ -105,7 +80,7 @@ export const DesktopMenu: React.FC<DesktopMenuProps> = ({ isCollapsed, setIsColl
           width={isCollapsed ? 24 : 48}
           height={isCollapsed ? 24 : 48}
           style={{ borderRadius: "50%" }}
-          onError={() => setSrc("/user.png")} // fallback to public folder
+          onError={() => setSrc("/user.png")}
         />
         {!isCollapsed && (
           <div>

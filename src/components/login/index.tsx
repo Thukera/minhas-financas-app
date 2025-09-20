@@ -8,6 +8,8 @@ import { Login } from '@/lib/models/login';
 import { useAuthService } from '@/lib/service';
 import { Alert, Message } from '../common/message';
 import { useRouter } from 'next/navigation';
+import { useUser } from "@/context/userContext";
+import { usePanelService } from "@/lib/service";
 
 const msgCampoObrigatorio = "Campo Obrigatorio"
 
@@ -30,7 +32,8 @@ export const LoginForm: React.FC = () => {
     const [messages, setMessages] = useState<Array<Alert>>([])
     const [errors, setErrors] = useState<LoginFormErros>()
     const router = useRouter();
-
+    const { setUser } = useUser();
+    const { getUserDetails } = usePanelService();
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();  // <-- Prevents the page reload
@@ -40,6 +43,7 @@ export const LoginForm: React.FC = () => {
     const submit = async () => {
         const login: Login = { username, password }
 
+
         try {
             // Validate form
             await validationSchema.validate({ username, password }, { abortEarly: false });
@@ -48,14 +52,9 @@ export const LoginForm: React.FC = () => {
             // Call signin service
             const signed = await service.signin(login);
             if (signed) {
-                console.log(document.cookie);
-                console.log("Signed : {}" , signed)
+                const userData = await getUserDetails();
+                setUser(userData ?? null);
                 router.push("/home");
-            } else {
-                setMessages([{
-                    tipo: "danger",
-                    texto: "Usuário ou Senha Inválidos!"
-                }]);
             }
         } catch (err: any) {
             if (err.inner) {

@@ -4,7 +4,6 @@ import { Layout } from "../layout"
 import { DomicilePanel, FinancesPanel } from "./panel"
 import { Panel } from "../common/panel"
 import { RecurrentPaymentsPanel } from "./panel/recurrent"
-import { useAuthService } from '@/lib/service';
 import { useRouter } from 'next/navigation';
 
 

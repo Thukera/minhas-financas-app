@@ -1,52 +1,29 @@
 "use client";
 
-import React, { useState , useEffect} from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { Home, House, DollarSign, CreditCard, ShoppingBag, BadgeDollarSign } from "lucide-react";
+import { House, DollarSign, CreditCard, ShoppingBag, BadgeDollarSign } from "lucide-react";
 import styles from "./MobileMenu.module.css";
-import { useRouter } from 'next/navigation';
+import { useRouter } from "next/navigation";
 import { useAuthService } from "@/lib/service";
-import { User } from "@/lib/models/user";
-import { usePanelService } from '@/lib/service';
-
+import { useUser } from "@/context/userContext";
 
 export const MobileMenu: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserOpen, setIsUserOpen] = useState(false);
-  const [username, setUsername] = useState(false);
-  const [id, setid] = useState(false);
-  const [profilePicturePath, setprofilePicturePath] = useState(false);
-  const { getUserDetails } = usePanelService();
-  const [src, setSrc] = useState("/user.png");
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
 
   const { logout } = useAuthService();
+  const { user, loading } = useUser();
   const router = useRouter();
 
-    useEffect(() => {
-      const fetchUser = async () => {
-        try {
-          const fetchedUser = await getUserDetails();
-          if (!fetchedUser) {
-            router.replace("/login"); // redirect if API fails
-            return;
-          }
-          setUser(fetchedUser);
-          setSrc(`${process.env.NEXT_PUBLIC_API_URL}/uploads/${fetchedUser.profilePicturePath}`);
-        } catch (error) {
-          console.error("Failed to fetch user", error);
-          localStorage.removeItem("signed");
-          router.replace("/login");
-        } finally {
-          setLoading(false);
-        }
-      };
-  
-      fetchUser();
-    }, [getUserDetails, router]);
-  
-    if (loading) return null; // or a loading spinner
+  const [src, setSrc] = useState("/user.png"); // fallback image
+
+  // Update avatar src when user is loaded
+  useEffect(() => {
+    if (user?.profilePicturePath) {
+      setSrc(`${process.env.NEXT_PUBLIC_API_URL}/uploads/${user.profilePicturePath}`);
+    }
+  }, [user]);
 
   return (
     <nav className={`navbar is-hidden-tablet ${styles.navbar}`}>
@@ -59,7 +36,14 @@ export const MobileMenu: React.FC = () => {
       <div className={styles.userMenu}>
         <div style={{ position: "relative" }}>
           <button className={styles.userButton} onClick={() => setIsUserOpen(!isUserOpen)}>
-            <Image src={src} alt="User" width={32} height={32} style={{ borderRadius: "50%" }} />
+            <Image
+              src={src}
+              alt="User"
+              width={32}
+              height={32}
+              style={{ borderRadius: "50%" }}
+              onError={() => setSrc("/user.png")}
+            />
           </button>
 
           {isUserOpen && (
@@ -67,15 +51,15 @@ export const MobileMenu: React.FC = () => {
               <a href="#">Configurações</a>
               <hr />
               <a
-              href="#"
-              onClick={async (e) => {
-                e.preventDefault();
-                await logout();
-                router.replace("/login");
-              }}
-            >
-              Logout
-            </a>
+                href="#"
+                onClick={async (e) => {
+                  e.preventDefault();
+                  await logout();
+                  router.replace("/login");
+                }}
+              >
+                Logout
+              </a>
             </div>
           )}
         </div>
@@ -88,8 +72,8 @@ export const MobileMenu: React.FC = () => {
       >
         <ul>
           <li>
-            <a href="#/home">
-              <BadgeDollarSign size={20} style={{ marginRight: "0.5rem" }} /> Inicio
+            <a href="/home">
+              <BadgeDollarSign size={20} style={{ marginRight: "0.5rem" }} /> Início
             </a>
           </li>
           <li>
@@ -106,7 +90,7 @@ export const MobileMenu: React.FC = () => {
             <a href="/domicilio">
               <House size={20} style={{ marginRight: "0.5rem" }} /> Residência
             </a>
-          </li>    
+          </li>
           <li>
             <a href="/credito">
               <CreditCard size={20} style={{ marginRight: "0.5rem" }} /> Crédito
