@@ -7,7 +7,7 @@ import { User } from "@/lib/models/user";
 
 interface UserContextType {
   user: User | null;
-  loading: boolean;
+  isLoading: boolean;
   setUser: (user: User | null) => void;
 }
 
@@ -15,7 +15,7 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setisLoading] = useState(true);
   const { getUserDetails } = usePanelService();
 
   useEffect(() => {
@@ -23,7 +23,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const fetchUser = async () => {
     try {
-      if (!user) {
+      if (!user && localStorage.getItem("signed") === "true") {
         const data = await getUserDetails();
         if (isMounted) setUser(data ?? null);
       }
@@ -36,7 +36,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (isMounted) setUser(null);
       }
     } finally {
-      if (isMounted) setLoading(false);
+      if (isMounted) setisLoading(false);
     }
   };
 
@@ -48,7 +48,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []); // run only once on mount
 
   return (
-    <UserContext.Provider value={{ user, setUser, loading }}>
+    <UserContext.Provider value={{ user, setUser, isLoading }}>
       {children}
     </UserContext.Provider>
   );

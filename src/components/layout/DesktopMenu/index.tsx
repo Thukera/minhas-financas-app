@@ -23,7 +23,7 @@ const links = [
 
 export const DesktopMenu: React.FC<DesktopMenuProps> = ({ isCollapsed, setIsCollapsed }) => {
   const { logout } = useAuthService();
-  const { user, loading } = useUser();
+  const { user, isLoading } = useUser();
   const router = useRouter();
 
   const [src, setSrc] = useState("/user.png"); // fallback image

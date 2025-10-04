@@ -1,6 +1,7 @@
 import { AxiosResponse } from "axios";
 import { httpClient } from "../http";
 import { Login } from "../models/login";
+import { useUser } from "@/context/userContext";
 
 const signInEndpoint: string = "api/cookie/signin";
 const refreshEndpoint: string = "api/cookie/refresh";
@@ -12,6 +13,7 @@ export const useAuthService = () => {
             const response = await httpClient.post(signInEndpoint, login);
             // login successful → mark in localStorage
             localStorage.setItem("signed", "true");
+            //await useUser().setUser(response.data.user); 
             return true;
         } catch (error) {
             console.error("Login failed", error);
