@@ -9,6 +9,7 @@ interface UserContextType {
   user: User | null;
   isLoading: boolean;
   setUser: (user: User | null) => void;
+  loading: boolean;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -17,6 +18,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setisLoading] = useState(true);
   const { getUserDetails } = usePanelService();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -48,7 +50,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []); // run only once on mount
 
   return (
-    <UserContext.Provider value={{ user, setUser, isLoading }}>
+    <UserContext.Provider value={{ user, setUser, isLoading, loading, }}>
       {children}
     </UserContext.Provider>
   );
