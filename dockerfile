@@ -12,6 +12,10 @@ RUN yarn install --frozen-lockfile
 # Copy source code
 COPY . .
 
+# Set build-time environment variable
+ARG NEXT_PUBLIC_API_URL=http://192.168.0.60:9090
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 # Build the app
 RUN yarn build
 
@@ -37,9 +41,6 @@ COPY --from=builder /app/next.config.mjs ./next.config.mjs
 
 # Expose port
 EXPOSE 3000
-
-# Set environment variable for the API (can be overridden at runtime)
-ENV NEXT_PUBLIC_API_URL=http://192.168.0.60:9090
 
 # Start with yarn
 CMD ["yarn", "start"]
