@@ -55,6 +55,12 @@ export const LoginForm: React.FC = () => {
                 const userData = await getUserDetails();
                 setUser(userData ?? null);
                 router.push("/home");
+            } else {
+                // Login failed - show error message
+                setMessages([{
+                    tipo: "danger",
+                    texto: "Usuário ou senha inválidos. Por favor, tente novamente."
+                }]);
             }
         } catch (err: any) {
             if (err.inner) {

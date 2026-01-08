@@ -1,5 +1,5 @@
 # ---- Build stage ----
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package.json yarn.lock ./
 
 # Install dependencies
-RUN yarn install --frozen-lockfile
+RUN yarn install --frozen-lockfile --network-timeout 100000
 
 # Copy source code
 COPY . .
@@ -20,7 +20,7 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 RUN yarn build
 
 # ---- Production stage ----
-FROM node:18-alpine AS runner
+FROM node:20-alpine AS runner
 
 WORKDIR /app
 
