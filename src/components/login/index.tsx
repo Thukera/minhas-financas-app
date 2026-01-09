@@ -5,7 +5,7 @@ import * as yup from 'yup';
 import { useEffect, useState } from 'react'; // Use effect , update the project to check if already have a token on cookie
 import '@/styles/login.scss';  // login styles only for login form
 import { Login } from '@/lib/models/login';
-import { useAuthService } from '@/lib/service';
+import { useAuthService, CreateUserRequest } from '@/lib/service';
 import { Alert, Message } from '../common/message';
 import { useRouter } from 'next/navigation';
 import { useUser } from "@/context/userContext";
@@ -31,9 +31,20 @@ export const LoginForm: React.FC = () => {
     const [password, setpassword] = useState('')
     const [messages, setMessages] = useState<Array<Alert>>([])
     const [errors, setErrors] = useState<LoginFormErros>()
+    const [showSignupModal, setShowSignupModal] = useState(false);
     const router = useRouter();
     const { setUser } = useUser();
     const { getUserDetails } = usePanelService();
+
+    // Signup form state
+    const [signupForm, setSignupForm] = useState({
+        doc: "",
+        name: "",
+        username: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+    });
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();  // <-- Prevents the page reload
@@ -80,6 +91,82 @@ export const LoginForm: React.FC = () => {
             }
         }
     }
+
+    const handleSignupSubmit = async () => {
+        // Clear previous messages
+        setMessages([]);
+
+        // Validation
+        if (!signupForm.doc || !signupForm.name || !signupForm.username || 
+            !signupForm.email || !signupForm.password || !signupForm.confirmPassword) {
+            setMessages([{
+                tipo: "warning",
+                texto: "Por favor, preencha todos os campos obrigatórios"
+            }]);
+            return;
+        }
+
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(signupForm.email)) {
+            setMessages([{
+                tipo: "warning",
+                texto: "Por favor, insira um email válido"
+            }]);
+            return;
+        }
+
+        // Password match validation
+        if (signupForm.password !== signupForm.confirmPassword) {
+            setMessages([{
+                tipo: "warning",
+                texto: "As senhas não coincidem"
+            }]);
+            return;
+        }
+
+        // Password length validation
+        if (signupForm.password.length < 6) {
+            setMessages([{
+                tipo: "warning",
+                texto: "A senha deve ter no mínimo 6 caracteres"
+            }]);
+            return;
+        }
+
+        const userData: CreateUserRequest = {
+            doc: signupForm.doc,
+            name: signupForm.name,
+            username: signupForm.username,
+            email: signupForm.email,
+            password: signupForm.password,
+            role: ["user"],
+            status: true,
+        };
+
+        const success = await service.signup(userData);
+        if (success) {
+            setMessages([{
+                tipo: "success",
+                texto: "Conta criada com sucesso! Faça login para continuar."
+            }]);
+            setShowSignupModal(false);
+            // Reset form
+            setSignupForm({
+                doc: "",
+                name: "",
+                username: "",
+                email: "",
+                password: "",
+                confirmPassword: "",
+            });
+        } else {
+            setMessages([{
+                tipo: "danger",
+                texto: "Erro ao criar conta. Verifique os dados e tente novamente."
+            }]);
+        }
+    };
 
     return (
         <section className="section is-flex is-align-items-center is-justify-content-center">
@@ -146,9 +233,123 @@ export const LoginForm: React.FC = () => {
 
                 <p className="has-text-centered is-size-7 mt-4">
                     Don’t have an account?
-                    <a href="#" className="is-link-text has-text-weight-semibold">Sign up</a>
+                    <a 
+                        href="#" 
+                        className="is-link-text has-text-weight-semibold"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            setShowSignupModal(true);
+                        }}
+                    > Sign up</a>
                 </p>
             </div>
+
+            {/* Signup Modal */}
+            {showSignupModal && (
+                <div className="modal is-active">
+                    <div className="modal-background" onClick={() => setShowSignupModal(false)}></div>
+                    <div className="modal-card" style={{ maxWidth: "500px" }}>
+                        <header className="modal-card-head">
+                            <p className="modal-card-title">Criar Nova Conta</p>
+                            <button 
+                                className="delete" 
+                                aria-label="close" 
+                                onClick={() => setShowSignupModal(false)}
+                            ></button>
+                        </header>
+                        <section className="modal-card-body">
+                            <div className="field">
+                                <label className="label">CPF *</label>
+                                <div className="control">
+                                    <input
+                                        className="input"
+                                        type="text"
+                                        placeholder="000.000.000-00"
+                                        value={signupForm.doc}
+                                        onChange={(e) => setSignupForm({ ...signupForm, doc: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="field">
+                                <label className="label">Nome Completo *</label>
+                                <div className="control">
+                                    <input
+                                        className="input"
+                                        type="text"
+                                        placeholder="Seu nome completo"
+                                        value={signupForm.name}
+                                        onChange={(e) => setSignupForm({ ...signupForm, name: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="field">
+                                <label className="label">Usuário *</label>
+                                <div className="control">
+                                    <input
+                                        className="input"
+                                        type="text"
+                                        placeholder="username"
+                                        value={signupForm.username}
+                                        onChange={(e) => setSignupForm({ ...signupForm, username: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="field">
+                                <label className="label">Email *</label>
+                                <div className="control">
+                                    <input
+                                        className="input"
+                                        type="email"
+                                        placeholder="email@exemplo.com"
+                                        value={signupForm.email}
+                                        onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="field">
+                                <label className="label">Senha *</label>
+                                <div className="control">
+                                    <input
+                                        className="input"
+                                        type="password"
+                                        placeholder="Mínimo 6 caracteres"
+                                        value={signupForm.password}
+                                        onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="field">
+                                <label className="label">Confirmar Senha *</label>
+                                <div className="control">
+                                    <input
+                                        className="input"
+                                        type="password"
+                                        placeholder="Digite a senha novamente"
+                                        value={signupForm.confirmPassword}
+                                        onChange={(e) => setSignupForm({ ...signupForm, confirmPassword: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                        </section>
+                        <footer className="modal-card-foot">
+                            <button className="button is-dark" onClick={handleSignupSubmit}>
+                                Criar Conta
+                            </button>
+                            <button 
+                                className="button is-dark is-outlined" 
+                                onClick={() => setShowSignupModal(false)}
+                            >
+                                Cancelar
+                            </button>
+                        </footer>
+                    </div>
+                </div>
+            )}
         </section>
     )
 }

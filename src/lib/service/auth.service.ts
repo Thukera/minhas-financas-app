@@ -5,6 +5,17 @@ import { useUser } from "@/context/userContext";
 
 const signInEndpoint: string = "api/cookie/signin";
 const refreshEndpoint: string = "api/cookie/refresh";
+const signUpEndpoint: string = "api/auth/signup";
+
+export interface CreateUserRequest {
+    doc: string;
+    name: string;
+    username: string;
+    email: string;
+    role: string[];
+    password: string;
+    status: boolean;
+}
 
 export const useAuthService = () => {
 
@@ -43,9 +54,20 @@ export const useAuthService = () => {
         }
     };
 
+    const signup = async (userData: CreateUserRequest): Promise<boolean> => {
+        try {
+            await httpClient.post(signUpEndpoint, userData);
+            return true;
+        } catch (error) {
+            console.error("Signup failed", error);
+            return false;
+        }
+    };
+
     return {
         signin,
         refreshToken,
-        logout
+        logout,
+        signup
     }
 }

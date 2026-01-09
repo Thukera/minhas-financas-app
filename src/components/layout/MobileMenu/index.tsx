@@ -82,7 +82,7 @@ export const MobileMenu: React.FC = () => {
             </a>
           </li>
           <li>
-            <a href="#">
+            <a href="/compras">
               <ShoppingBag size={20} style={{ marginRight: "0.5rem" }} /> Compras
             </a>
           </li>

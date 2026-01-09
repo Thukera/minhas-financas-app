@@ -6,6 +6,7 @@ import { CreditCard } from "../models/user/creditcard";
 const userPanelEndpoint: string = "api/panel";
 const invoiceDetailsEndpoint: string = "api/creditcard/invoice";
 const creditCardEndpoint: string = "api/creditcard";
+const creditCardPurchaseEndpoint: string = "api/creditcard/purchase";
 
 export interface InvoiceDetails {
     invoiceId: number;
@@ -54,6 +55,23 @@ export interface CreditCardDetails {
     }[];
 }
 
+export interface CreatePurchaseRequest {
+    descricao: string;
+    creditCardId: number;
+    totalInstallments: number;
+    category: string;
+    purchaseDateTime: string;
+    value: number;
+}
+
+export interface CreateSubscriptionRequest {
+    descricao: string;
+    creditCardId: number;
+    totalInstallments: number;
+    category: string;
+    value: number;
+}
+
 export const usePanelService = () => {
 
     const getUserDetails = async (): Promise<User | null> => {
@@ -87,9 +105,31 @@ export const usePanelService = () => {
         }
     };
 
+    const createCreditCardPurchase = async (purchaseData: CreatePurchaseRequest): Promise<boolean> => {
+        try {
+            await httpClient.post(creditCardPurchaseEndpoint, purchaseData);
+            return true;
+        } catch (error) {
+            console.error("Failed to create credit card purchase", error);
+            return false;
+        }
+    };
+
+    const createCreditCardSubscription = async (subscriptionData: CreateSubscriptionRequest): Promise<boolean> => {
+        try {
+            await httpClient.post(creditCardPurchaseEndpoint, subscriptionData);
+            return true;
+        } catch (error) {
+            console.error("Failed to create credit card subscription", error);
+            return false;
+        }
+    };
+
     return {
         getUserDetails,
         getInvoiceDetails,
-        getCreditCardDetails
+        getCreditCardDetails,
+        createCreditCardPurchase,
+        createCreditCardSubscription
     }
 }
