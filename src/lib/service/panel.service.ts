@@ -72,6 +72,16 @@ export interface CreateSubscriptionRequest {
     value: number;
 }
 
+export interface CreateCreditCardRequest {
+    bank: string;
+    endNumbers: string;
+    dueDate: number;
+    nickname: string;
+    billingPeriodStart: number;
+    billingPeriodEnd: number;
+    totalLimit: number;
+}
+
 export const usePanelService = () => {
 
     const getUserDetails = async (): Promise<User | null> => {
@@ -125,11 +135,22 @@ export const usePanelService = () => {
         }
     };
 
+    const createCreditCard = async (cardData: CreateCreditCardRequest): Promise<boolean> => {
+        try {
+            await httpClient.post(creditCardEndpoint, cardData);
+            return true;
+        } catch (error) {
+            console.error("Failed to create credit card", error);
+            return false;
+        }
+    };
+
     return {
         getUserDetails,
         getInvoiceDetails,
         getCreditCardDetails,
         createCreditCardPurchase,
-        createCreditCardSubscription
+        createCreditCardSubscription,
+        createCreditCard
     }
 }

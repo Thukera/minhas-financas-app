@@ -253,7 +253,7 @@ export const ComprasPage: React.FC = () => {
                 return (
                   <div key={option.id} className="column is-half">
                     <div
-                      className={`box has-background-white-ter is-clickable`}
+                      className={`box has-background-white-ter  is-clickable`}
                       onClick={() => openModal(option.id)}
                       style={{
                         transition: "transform 0.2s, box-shadow 0.2s",
@@ -275,7 +275,7 @@ export const ComprasPage: React.FC = () => {
                           </span>
                         </div>
                         <div className="media-content">
-                          <p className="title is-4">{option.title}</p>
+                          <p className="title is-4 has-text-grey">{option.title}</p>
                           <p className="subtitle is-6">{option.description}</p>
                         </div>
                       </div>

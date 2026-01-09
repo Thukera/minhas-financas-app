@@ -9,7 +9,8 @@ import ResponsiveTable from "@/components/common/table";
 import "./tabs.css";
 import { PieChart } from "react-minimal-pie-chart";
 import { useUser } from "@/context/userContext";
-import { usePanelService, Purchase } from "@/lib/service";
+import { usePanelService, Purchase, CreateCreditCardRequest } from "@/lib/service";
+import { Alert, Message } from "../common/message";
 
 // helper
 const formatCurrency = (v: number) =>
@@ -19,7 +20,7 @@ const formatCurrency = (v: number) =>
 export const CreditPage: React.FC = () => {
   const router = useRouter();
   const { user, isLoading: userLoading } = useUser();
-  const { getUserDetails, getInvoiceDetails, getCreditCardDetails } = usePanelService();
+  const { getUserDetails, getInvoiceDetails, getCreditCardDetails, createCreditCard } = usePanelService();
 
   const [loading, setLoading] = useState(true);
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
@@ -27,6 +28,21 @@ export const CreditPage: React.FC = () => {
   const [activeInvoice, setActiveInvoice] = useState<Invoice | null>(null);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loadingPurchases, setLoadingPurchases] = useState(false);
+  const [messages, setMessages] = useState<Array<Alert>>([]);
+
+  // Modal state
+  const [showAddCardModal, setShowAddCardModal] = useState(false);
+
+  // Credit card form state
+  const [cardForm, setCardForm] = useState({
+    bank: "",
+    endNumbers: "",
+    dueDate: 5,
+    nickname: "",
+    billingPeriodStart: 1,
+    billingPeriodEnd: 30,
+    totalLimit: 0,
+  });
 
   // Filter invoices: 2 before current + current + 7 after (max 10)
   const filterInvoices = (invoices: Invoice[], currentInvoiceId: number): Invoice[] => {
@@ -59,6 +75,71 @@ export const CreditPage: React.FC = () => {
       setPurchases([]);
     } finally {
       setLoadingPurchases(false);
+    }
+  };
+
+  const handleAddCard = async () => {
+    setMessages([]);
+
+    // Validation
+    if (!cardForm.bank || !cardForm.nickname || !cardForm.endNumbers) {
+      setMessages([{
+        tipo: "warning",
+        texto: "Por favor, preencha todos os campos obrigatórios"
+      }]);
+      return;
+    }
+
+    if (cardForm.endNumbers.length !== 4) {
+      setMessages([{
+        tipo: "warning",
+        texto: "Os últimos 4 dígitos devem ter exatamente 4 caracteres"
+      }]);
+      return;
+    }
+
+    if (cardForm.totalLimit <= 0) {
+      setMessages([{
+        tipo: "warning",
+        texto: "O limite total deve ser maior que zero"
+      }]);
+      return;
+    }
+
+    const cardData: CreateCreditCardRequest = {
+      bank: cardForm.bank,
+      endNumbers: cardForm.endNumbers,
+      dueDate: cardForm.dueDate,
+      nickname: cardForm.nickname,
+      billingPeriodStart: cardForm.billingPeriodStart,
+      billingPeriodEnd: cardForm.billingPeriodEnd,
+      totalLimit: cardForm.totalLimit,
+    };
+
+    const success = await createCreditCard(cardData);
+    if (success) {
+      setMessages([{
+        tipo: "success",
+        texto: "Cartão adicionado com sucesso!"
+      }]);
+      setShowAddCardModal(false);
+      // Reset form
+      setCardForm({
+        bank: "",
+        endNumbers: "",
+        dueDate: 5,
+        nickname: "",
+        billingPeriodStart: 1,
+        billingPeriodEnd: 30,
+        totalLimit: 0,
+      });
+      // Reload cards
+      window.location.reload();
+    } else {
+      setMessages([{
+        tipo: "danger",
+        texto: "Erro ao adicionar cartão. Tente novamente."
+      }]);
     }
   };
 
@@ -150,10 +231,33 @@ export const CreditPage: React.FC = () => {
   return (
     <Layout>
       <Panel>
+        {messages.map((msg, index) => (
+          <Message
+            key={index}
+            texto={msg.texto}
+            tipo={msg.tipo}
+            field={msg.field ?? undefined}
+          />
+        ))}
+        
         {/* Tabs */}
-        <div className="box  mb-5 p-5">
-          <div className="tabs is-boxed is-medium">
-            <ul>
+        <div className="box mb-5 p-5">
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
+            <h3 className="title is-5 mb-0">Meus Cartões</h3>
+            <button 
+              className="button is-dark is-small"
+              onClick={() => setShowAddCardModal(true)}
+              title="Adicionar novo cartão"
+            >
+              <span className="icon">
+                <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>+</span>
+              </span>
+              <span className="is-hidden-mobile">Novo Cartão</span>
+            </button>
+          </div>
+          
+          <div className="tabs is-boxed is-medium" style={{ overflowX: "auto", whiteSpace: "nowrap" }}>
+            <ul style={{ flexWrap: "nowrap" }}>
               {creditCards.map((card) => (
                 <li 
                 key={card.id}
@@ -189,20 +293,20 @@ export const CreditPage: React.FC = () => {
                 </div>
               </div>
               
-              <div className="columns is-mobile mt-4">
-                <div className="column">
+              <div className="columns is-mobile is-multiline mt-4">
+                <div className="column is-half-mobile is-one-third-tablet">
                   <p className="has-text-grey-light is-size-7 mb-1">Limite Total</p>
                   <p className="has-text-white is-size-5 has-text-weight-semibold">
                     {activeCard.totalLimit.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                   </p>
                 </div>
-                <div className="column">
+                <div className="column is-half-mobile is-one-third-tablet">
                   <p className="has-text-grey-light is-size-7 mb-1">Disponível</p>
                   <p className="has-text-success is-size-5 has-text-weight-semibold">
                     {(activeCard.totalLimit - activeCard.usedLimit).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                   </p>
                 </div>
-                <div className="column">
+                <div className="column is-half-mobile is-one-third-tablet">
                   <p className="has-text-grey-light is-size-7 mb-1">Fechamento</p>
                   <p className="has-text-white is-size-5 has-text-weight-semibold">
                     Dia {activeCard.billingPeriodEnd}
@@ -260,13 +364,13 @@ export const CreditPage: React.FC = () => {
         {/* --- Invoice Section --- */}
         {activeInvoice && (
           <div className="box mb-5">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h3 className="title is-6">Fatura</h3>
-              <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
+              <h3 className="title is-6 mb-0">Fatura</h3>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
                 {activeCard?.invoices?.map(inv => (
                   <button
                     key={inv.id}
-                    className={`button is-small mr-2 ${inv.id === activeInvoice.id ? "is-info" : ""}`}
+                    className={`button is-small ${inv.id === activeInvoice.id ? "is-info" : ""}`}
                     onClick={() => handleInvoiceSwitch(inv)}
                   >
                     {inv.dueDate.slice(5, 7)}/{inv.dueDate.slice(0, 4)}
@@ -327,6 +431,137 @@ export const CreditPage: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Add Credit Card Modal */}
+        {showAddCardModal && (
+          <div className="modal is-active">
+            <div className="modal-background" onClick={() => setShowAddCardModal(false)}></div>
+            <div className="modal-card" style={{ maxWidth: "500px" }}>
+              <header className="modal-card-head">
+                <p className="modal-card-title">Adicionar Novo Cartão</p>
+                <button 
+                  className="delete" 
+                  aria-label="close" 
+                  onClick={() => setShowAddCardModal(false)}
+                ></button>
+              </header>
+              <section className="modal-card-body">
+                <div className="field">
+                  <label className="label">Apelido do Cartão *</label>
+                  <div className="control">
+                    <input
+                      className="input"
+                      type="text"
+                      placeholder="Ex: Gold, Platinum, Internacional"
+                      value={cardForm.nickname}
+                      onChange={(e) => setCardForm({ ...cardForm, nickname: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label className="label">Banco *</label>
+                  <div className="control">
+                    <input
+                      className="input"
+                      type="text"
+                      placeholder="Ex: ITAU, BRADESCO, NUBANK"
+                      value={cardForm.bank}
+                      onChange={(e) => setCardForm({ ...cardForm, bank: e.target.value.toUpperCase() })}
+                    />
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label className="label">Últimos 4 Dígitos *</label>
+                  <div className="control">
+                    <input
+                      className="input"
+                      type="text"
+                      placeholder="1234"
+                      maxLength={4}
+                      value={cardForm.endNumbers}
+                      onChange={(e) => setCardForm({ ...cardForm, endNumbers: e.target.value.replace(/\D/g, '') })}
+                    />
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label className="label">Limite Total *</label>
+                  <div className="control">
+                    <input
+                      className="input"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={cardForm.totalLimit || ""}
+                      onChange={(e) => setCardForm({ ...cardForm, totalLimit: Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
+
+                <div className="columns">
+                  <div className="column">
+                    <div className="field">
+                      <label className="label">Dia do Vencimento</label>
+                      <div className="control">
+                        <input
+                          className="input"
+                          type="number"
+                          min="1"
+                          max="31"
+                          value={cardForm.dueDate}
+                          onChange={(e) => setCardForm({ ...cardForm, dueDate: Number(e.target.value) })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="column">
+                    <div className="field">
+                      <label className="label">Início do Período</label>
+                      <div className="control">
+                        <input
+                          className="input"
+                          type="number"
+                          min="1"
+                          max="31"
+                          value={cardForm.billingPeriodStart}
+                          onChange={(e) => setCardForm({ ...cardForm, billingPeriodStart: Number(e.target.value) })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="column">
+                    <div className="field">
+                      <label className="label">Fim do Período</label>
+                      <div className="control">
+                        <input
+                          className="input"
+                          type="number"
+                          min="1"
+                          max="31"
+                          value={cardForm.billingPeriodEnd}
+                          onChange={(e) => setCardForm({ ...cardForm, billingPeriodEnd: Number(e.target.value) })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+              <footer className="modal-card-foot">
+                <button className="button is-dark" onClick={handleAddCard}>
+                  Adicionar
+                </button>
+                <button 
+                  className="button is-dark is-outlined" 
+                  onClick={() => setShowAddCardModal(false)}
+                >
+                  Cancelar
+                </button>
+              </footer>
+            </div>
+          </div>
+        )}
       </Panel>
     </Layout>
   );
