@@ -13,8 +13,10 @@ RUN yarn install --frozen-lockfile --network-timeout 100000
 COPY . .
 
 # Set build-time environment variable
-ARG NEXT_PUBLIC_API_URL=http://192.168.0.60:9090
+#ARG NEXT_PUBLIC_API_URL=http://192.168.0.60:9090
+ARG NEXT_PUBLIC_API_URL=https://api.hardman.app.br
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 
 # Build the app
 RUN yarn build
