@@ -3,7 +3,7 @@ name: 🚀 Deploy Frontend to Orange Pi
 on:
   push:
     branches:
-      - master  # Only deploy on master branch
+      - master  
 
 jobs:
   deploy:
