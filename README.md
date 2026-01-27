@@ -51,3 +51,5 @@ Axios
 Yup 
 https://loading.io/css/
 lucide-react
+
+# ci: test self-hosted runner test
