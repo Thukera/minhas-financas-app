@@ -3,7 +3,8 @@ name: 🚀 Deploy Frontend to Orange Pi
 on:
   push:
     branches:
-      - master
+      #- master
+      - cicd
 
 jobs:
   deploy:
@@ -21,16 +22,16 @@ jobs:
           echo "🚀 Starting Frontend Deployment"
           
           # Build Docker image
-          sudo docker build \
+          docker build \
             --build-arg NEXT_PUBLIC_API_URL=https://api.hardman.app.br \
             -t my-finances-frontend:latest .
           
           # Stop old container
-          sudo docker stop my-finances-app || true
-          sudo docker rm my-finances-app || true
+          docker stop my-finances-app || true
+          docker rm my-finances-app || true
           
           # Run new container
-          sudo docker run -d \
+          docker run -d \
             -p 3000:3000 \
             --name my-finances-app \
             --restart unless-stopped \
@@ -39,7 +40,7 @@ jobs:
           # Verify
           sleep 5
           
-          if sudo docker ps | grep -q my-finances-app; then
+          if docker ps | grep -q my-finances-app; then
             echo "✅ Frontend deployed!"
             echo "🌐 App: https://hardman.app.br"
           else
@@ -47,4 +48,4 @@ jobs:
             exit 1
           fi
           
-          sudo docker image prune -f
+          docker image prune -f
