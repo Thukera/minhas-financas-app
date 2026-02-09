@@ -8,6 +8,7 @@ import { CreditCard, Wallet, RefreshCw, Home, Repeat } from "lucide-react";
 import { usePanelService, CreatePurchaseRequest, CreateSubscriptionRequest } from "@/lib/service";
 import { useUser } from "@/context/userContext";
 import { Alert, Message } from "../common/message";
+import { getAuthRedirectDelay } from '@/lib/utils/config';
 
 interface ModalProps {
   isOpen: boolean;
@@ -73,7 +74,12 @@ export const ComprasPage: React.FC = () => {
   useEffect(() => {
     const signed = localStorage.getItem("signed") === "true";
     if (!signed) {
-      router.replace("/login");
+      const delay = getAuthRedirectDelay();
+      const timer = setTimeout(() => {
+        router.replace("/login");
+      }, delay);
+      
+      return () => clearTimeout(timer);
     } else {
       setLoading(false);
       loadCreditCards();

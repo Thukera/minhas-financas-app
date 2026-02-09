@@ -11,6 +11,10 @@ import { PieChart } from "react-minimal-pie-chart";
 import { useUser } from "@/context/userContext";
 import { usePanelService, Purchase, CreateCreditCardRequest } from "@/lib/service";
 import { Alert, Message } from "../common/message";
+import { creditCardValidationSchema, CreditCardFormData } from "@/lib/validations";
+import { Loader } from "../common/loader";
+import { getAuthRedirectDelay } from '@/lib/utils/config';
+import { useFormValidation } from '@/hooks/useFormValidation';
 
 // helper
 const formatCurrency = (v: number) =>
@@ -29,6 +33,13 @@ export const CreditPage: React.FC = () => {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loadingPurchases, setLoadingPurchases] = useState(false);
   const [messages, setMessages] = useState<Array<Alert>>([]);
+
+  // Real-time validation for credit card form
+  const cardValidation = useFormValidation<CreditCardFormData>({
+    validationSchema: creditCardValidationSchema,
+    validateOnChange: true,
+    validateOnBlur: true
+  });
 
   // Modal state
   const [showAddCardModal, setShowAddCardModal] = useState(false);
@@ -81,73 +92,81 @@ export const CreditPage: React.FC = () => {
   const handleAddCard = async () => {
     setMessages([]);
 
-    // Validation
-    if (!cardForm.bank || !cardForm.nickname || !cardForm.endNumbers) {
-      setMessages([{
-        tipo: "warning",
-        texto: "Por favor, preencha todos os campos obrigatórios"
-      }]);
+    // Validate entire form
+    const { errors: validationErrors, isValid } = await cardValidation.validateForm(cardForm);
+    
+    if (!isValid) {
+      cardValidation.setFormErrors(validationErrors);
       return;
     }
 
-    if (cardForm.endNumbers.length !== 4) {
-      setMessages([{
-        tipo: "warning",
-        texto: "Os últimos 4 dígitos devem ter exatamente 4 caracteres"
-      }]);
-      return;
-    }
+    try {
+      const cardData: CreateCreditCardRequest = {
+        bank: cardForm.bank,
+        endNumbers: cardForm.endNumbers,
+        dueDate: cardForm.dueDate,
+        nickname: cardForm.nickname,
+        billingPeriodStart: cardForm.billingPeriodStart,
+        billingPeriodEnd: cardForm.billingPeriodEnd,
+        totalLimit: cardForm.totalLimit,
+      };
 
-    if (cardForm.totalLimit <= 0) {
-      setMessages([{
-        tipo: "warning",
-        texto: "O limite total deve ser maior que zero"
-      }]);
-      return;
-    }
-
-    const cardData: CreateCreditCardRequest = {
-      bank: cardForm.bank,
-      endNumbers: cardForm.endNumbers,
-      dueDate: cardForm.dueDate,
-      nickname: cardForm.nickname,
-      billingPeriodStart: cardForm.billingPeriodStart,
-      billingPeriodEnd: cardForm.billingPeriodEnd,
-      totalLimit: cardForm.totalLimit,
-    };
-
-    const success = await createCreditCard(cardData);
-    if (success) {
-      setMessages([{
-        tipo: "success",
-        texto: "Cartão adicionado com sucesso!"
-      }]);
-      setShowAddCardModal(false);
-      // Reset form
-      setCardForm({
-        bank: "",
-        endNumbers: "",
-        dueDate: 5,
-        nickname: "",
-        billingPeriodStart: 1,
-        billingPeriodEnd: 30,
-        totalLimit: 0,
-      });
-      // Reload cards
-      window.location.reload();
-    } else {
+      const success = await createCreditCard(cardData);
+      if (success) {
+        setMessages([{
+          tipo: "success",
+          texto: "Cartão adicionado com sucesso!"
+        }]);
+        setShowAddCardModal(false);
+        // Reset form and validation
+        setCardForm({
+          bank: "",
+          endNumbers: "",
+          dueDate: 5,
+          nickname: "",
+          billingPeriodStart: 1,
+          billingPeriodEnd: 30,
+          totalLimit: 0,
+        });
+        cardValidation.resetValidation();
+        // Reload cards
+        window.location.reload();
+      } else {
+        setMessages([{
+          tipo: "danger",
+          texto: "Erro ao adicionar cartão. Tente novamente."
+        }]);
+      }
+    } catch (err: any) {
+      console.error(err);
       setMessages([{
         tipo: "danger",
-        texto: "Erro ao adicionar cartão. Tente novamente."
+        texto: "Um erro inesperado aconteceu, tente novamente mais tarde."
       }]);
     }
+  };
+
+  // Handle card field change with real-time validation
+  const handleCardFieldChange = async (field: keyof CreditCardFormData, value: string | number) => {
+    const updatedForm = { ...cardForm, [field]: value };
+    setCardForm(updatedForm);
+    await cardValidation.handleFieldChange(field, value, updatedForm);
+  };
+
+  // Handle card field blur
+  const handleCardFieldBlur = async (field: keyof CreditCardFormData, value: string | number) => {
+    await cardValidation.handleFieldBlur(field, value);
   };
 
   useEffect(() => {
     const signed = localStorage.getItem("signed") === "true";
     if (!signed) {
-      router.replace("/login");
-      return;
+      const delay = getAuthRedirectDelay();
+      const timer = setTimeout(() => {
+        router.replace("/login");
+      }, delay);
+      
+      return () => clearTimeout(timer);
     }
 
     const loadCards = async () => {
@@ -225,7 +244,24 @@ export const CreditPage: React.FC = () => {
     loadCards();
   }, [user]);
 
-  if (loading || userLoading) return <p className="has-text-centered p-4">Carregando cartões...</p>;
+  if (loading || userLoading) {
+    return (
+      <Layout>
+        <Panel>
+          <div className="box">
+            <Loader 
+              size="large" 
+              text="Carregando cartões..." 
+              showSkeletons={true} 
+            />
+            <p className="has-text-centered has-text-grey-light is-size-7 mt-2">
+              Aguarde enquanto buscamos seus dados
+            </p>
+          </div>
+        </Panel>
+      </Layout>
+    );
+  }
   
 
   return (
@@ -245,7 +281,7 @@ export const CreditPage: React.FC = () => {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
             <h3 className="title is-5 mb-0">Meus Cartões</h3>
             <button 
-              className="button is-dark is-small"
+              className="button is-success is-small"
               onClick={() => setShowAddCardModal(true)}
               title="Adicionar novo cartão"
             >
@@ -405,7 +441,9 @@ export const CreditPage: React.FC = () => {
           <div style={{ marginBottom: "2rem" }}>
             <h2 className="subtitle is-size-6">Extrato</h2>
             {loadingPurchases ? (
-              <p className="has-text-centered">Carregando compras...</p>
+              <div className="box">
+                <Loader size="small" text="Carregando compras..." />
+              </div>
             ) : (
               <ResponsiveTable
                 columns={[
@@ -450,54 +488,62 @@ export const CreditPage: React.FC = () => {
                   <label className="label">Apelido do Cartão *</label>
                   <div className="control">
                     <input
-                      className="input"
+                      className={`input ${cardValidation.errors?.nickname ? 'is-danger' : ''}`}
                       type="text"
                       placeholder="Ex: Gold, Platinum, Internacional"
                       value={cardForm.nickname}
-                      onChange={(e) => setCardForm({ ...cardForm, nickname: e.target.value })}
+                      onChange={(e) => handleCardFieldChange('nickname', e.target.value)}
+                      onBlur={(e) => handleCardFieldBlur('nickname', e.target.value)}
                     />
                   </div>
+                  {cardValidation.errors?.nickname && <p className="help is-danger">{cardValidation.errors.nickname}</p>}
                 </div>
 
                 <div className="field">
                   <label className="label">Banco *</label>
                   <div className="control">
                     <input
-                      className="input"
+                      className={`input ${cardValidation.errors?.bank ? 'is-danger' : ''}`}
                       type="text"
                       placeholder="Ex: ITAU, BRADESCO, NUBANK"
                       value={cardForm.bank}
-                      onChange={(e) => setCardForm({ ...cardForm, bank: e.target.value.toUpperCase() })}
+                      onChange={(e) => handleCardFieldChange('bank', e.target.value.toUpperCase())}
+                      onBlur={(e) => handleCardFieldBlur('bank', e.target.value.toUpperCase())}
                     />
                   </div>
+                  {cardValidation.errors?.bank && <p className="help is-danger">{cardValidation.errors.bank}</p>}
                 </div>
 
                 <div className="field">
                   <label className="label">Últimos 4 Dígitos *</label>
                   <div className="control">
                     <input
-                      className="input"
+                      className={`input ${cardValidation.errors?.endNumbers ? 'is-danger' : ''}`}
                       type="text"
                       placeholder="1234"
                       maxLength={4}
                       value={cardForm.endNumbers}
-                      onChange={(e) => setCardForm({ ...cardForm, endNumbers: e.target.value.replace(/\D/g, '') })}
+                      onChange={(e) => handleCardFieldChange('endNumbers', e.target.value.replace(/\D/g, ''))}
+                      onBlur={(e) => handleCardFieldBlur('endNumbers', e.target.value.replace(/\D/g, ''))}
                     />
                   </div>
+                  {cardValidation.errors?.endNumbers && <p className="help is-danger">{cardValidation.errors.endNumbers}</p>}
                 </div>
 
                 <div className="field">
                   <label className="label">Limite Total *</label>
                   <div className="control">
                     <input
-                      className="input"
+                      className={`input ${cardValidation.errors?.totalLimit ? 'is-danger' : ''}`}
                       type="number"
                       step="0.01"
                       placeholder="0.00"
                       value={cardForm.totalLimit || ""}
-                      onChange={(e) => setCardForm({ ...cardForm, totalLimit: Number(e.target.value) })}
+                      onChange={(e) => handleCardFieldChange('totalLimit', Number(e.target.value))}
+                      onBlur={(e) => handleCardFieldBlur('totalLimit', Number(e.target.value))}
                     />
                   </div>
+                  {cardValidation.errors?.totalLimit && <p className="help is-danger">{cardValidation.errors.totalLimit}</p>}
                 </div>
 
                 <div className="columns">
@@ -506,14 +552,16 @@ export const CreditPage: React.FC = () => {
                       <label className="label">Dia do Vencimento</label>
                       <div className="control">
                         <input
-                          className="input"
+                          className={`input ${cardValidation.errors?.dueDate ? 'is-danger' : ''}`}
                           type="number"
                           min="1"
                           max="31"
                           value={cardForm.dueDate}
-                          onChange={(e) => setCardForm({ ...cardForm, dueDate: Number(e.target.value) })}
+                          onChange={(e) => handleCardFieldChange('dueDate', Number(e.target.value))}
+                          onBlur={(e) => handleCardFieldBlur('dueDate', Number(e.target.value))}
                         />
                       </div>
+                      {cardValidation.errors?.dueDate && <p className="help is-danger">{cardValidation.errors.dueDate}</p>}
                     </div>
                   </div>
                   <div className="column">
@@ -521,14 +569,16 @@ export const CreditPage: React.FC = () => {
                       <label className="label">Início do Período</label>
                       <div className="control">
                         <input
-                          className="input"
+                          className={`input ${cardValidation.errors?.billingPeriodStart ? 'is-danger' : ''}`}
                           type="number"
                           min="1"
                           max="31"
                           value={cardForm.billingPeriodStart}
-                          onChange={(e) => setCardForm({ ...cardForm, billingPeriodStart: Number(e.target.value) })}
+                          onChange={(e) => handleCardFieldChange('billingPeriodStart', Number(e.target.value))}
+                          onBlur={(e) => handleCardFieldBlur('billingPeriodStart', Number(e.target.value))}
                         />
                       </div>
+                      {cardValidation.errors?.billingPeriodStart && <p className="help is-danger">{cardValidation.errors.billingPeriodStart}</p>}
                     </div>
                   </div>
                   <div className="column">
@@ -536,27 +586,29 @@ export const CreditPage: React.FC = () => {
                       <label className="label">Fim do Período</label>
                       <div className="control">
                         <input
-                          className="input"
+                          className={`input ${cardValidation.errors?.billingPeriodEnd ? 'is-danger' : ''}`}
                           type="number"
                           min="1"
                           max="31"
                           value={cardForm.billingPeriodEnd}
-                          onChange={(e) => setCardForm({ ...cardForm, billingPeriodEnd: Number(e.target.value) })}
+                          onChange={(e) => handleCardFieldChange('billingPeriodEnd', Number(e.target.value))}
+                          onBlur={(e) => handleCardFieldBlur('billingPeriodEnd', Number(e.target.value))}
                         />
                       </div>
+                      {cardValidation.errors?.billingPeriodEnd && <p className="help is-danger">{cardValidation.errors.billingPeriodEnd}</p>}
                     </div>
                   </div>
                 </div>
               </section>
-              <footer className="modal-card-foot">
-                <button className="button is-dark" onClick={handleAddCard}>
-                  Adicionar
-                </button>
+              <footer className="modal-card-foot is-justify-content-space-between">
                 <button 
-                  className="button is-dark is-outlined" 
+                  className="button is-danger" 
                   onClick={() => setShowAddCardModal(false)}
                 >
                   Cancelar
+                </button>
+                <button className="button is-success" onClick={handleAddCard}>
+                  Adicionar
                 </button>
               </footer>
             </div>

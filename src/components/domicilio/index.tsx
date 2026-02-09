@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Panel } from "../common/panel"
 import { DomicilePanel } from "../home/panel"
 import { Layout } from "../layout"
+import { getAuthRedirectDelay } from '@/lib/utils/config';
 
 export const Domicilio: React.FC = () => {
     const router = useRouter();
@@ -12,10 +13,12 @@ export const Domicilio: React.FC = () => {
         useEffect(() => {
             const signed = localStorage.getItem("signed") === "true";
             if (!signed) {
+            const delay = getAuthRedirectDelay();
+            const timer = setTimeout(() => {
                 router.replace("/login");
-            } else {
-                setLoading(false);
-            }
+            }, delay);
+            
+            return () => clearTimeout(timer);
         }, []);
 
     return (

@@ -1,8 +1,7 @@
 'use client';
 
 import { Input } from '@/components/common/input';
-import * as yup from 'yup';
-import { useEffect, useState } from 'react'; // Use effect , update the project to check if already have a token on cookie
+import { useEffect, useState } from 'react';
 import '@/styles/login.scss';  // login styles only for login form
 import { Login } from '@/lib/models/login';
 import { useAuthService, CreateUserRequest } from '@/lib/service';
@@ -10,18 +9,14 @@ import { Alert, Message } from '../common/message';
 import { useRouter } from 'next/navigation';
 import { useUser } from "@/context/userContext";
 import { usePanelService } from "@/lib/service";
-
-const msgCampoObrigatorio = "Campo Obrigatorio"
-
-const validationSchema = yup.object().shape({
-    username: yup.string().trim().required(msgCampoObrigatorio),
-    password: yup.string().trim().required(msgCampoObrigatorio)
-})
-
-interface LoginFormErros {
-    username?: string;
-    password?: string;
-}
+import { 
+    loginValidationSchema, 
+    signupValidationSchema,
+    LoginFormErrors,
+    SignupFormErrors 
+} from '@/lib/validations';
+import { getAuthRedirectDelay } from '@/lib/utils/config';
+import { useFormValidation } from '@/hooks/useFormValidation';
 
 export const LoginForm: React.FC = () => {
 
@@ -30,11 +25,32 @@ export const LoginForm: React.FC = () => {
     const [username, setUsername] = useState('')
     const [password, setpassword] = useState('')
     const [messages, setMessages] = useState<Array<Alert>>([])
-    const [errors, setErrors] = useState<LoginFormErros>()
+    const [errors, setErrors] = useState<LoginFormErrors>()
     const [showSignupModal, setShowSignupModal] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const router = useRouter();
     const { setUser } = useUser();
     const { getUserDetails } = usePanelService();
+
+    // Real-time validation for signup form
+    const signupValidation = useFormValidation<SignupFormErrors>({
+        validationSchema: signupValidationSchema,
+        validateOnChange: true,
+        validateOnBlur: true
+    });
+
+    // Check if already authenticated (only redirect if not actively submitting)
+    useEffect(() => {
+        const signed = localStorage.getItem("signed") === "true";
+        if (signed && !isSubmitting) {
+            const delay = getAuthRedirectDelay();
+            const timer = setTimeout(() => {
+                router.replace("/home");
+            }, delay);
+            
+            return () => clearTimeout(timer);
+        }
+    }, [router, isSubmitting]);
 
     // Signup form state
     const [signupForm, setSignupForm] = useState({
@@ -54,10 +70,11 @@ export const LoginForm: React.FC = () => {
     const submit = async () => {
         const login: Login = { username, password }
 
+        setIsSubmitting(true);
 
         try {
             // Validate form
-            await validationSchema.validate({ username, password }, { abortEarly: false });
+            await loginValidationSchema.validate({ username, password }, { abortEarly: false });
             setErrors({}); // clear previous errors
 
             // Call signin service
@@ -72,13 +89,14 @@ export const LoginForm: React.FC = () => {
                     tipo: "danger",
                     texto: "Usuário ou senha inválidos. Por favor, tente novamente."
                 }]);
+                setIsSubmitting(false);
             }
         } catch (err: any) {
             if (err.inner) {
                 // Validation errors
-                const validationErrors: LoginFormErros = {};
+                const validationErrors: LoginFormErrors = {};
                 err.inner.forEach((e: any) => {
-                    validationErrors[e.path as keyof LoginFormErros] = e.message;
+                    validationErrors[e.path as keyof LoginFormErrors] = e.message;
                 });
                 setErrors(validationErrors);
             } else {
@@ -89,6 +107,7 @@ export const LoginForm: React.FC = () => {
                     texto: "Um erro inesperado aconteceu, tente novamente mais tarde."
                 }]);
             }
+            setIsSubmitting(false);
         }
     }
 
@@ -96,76 +115,67 @@ export const LoginForm: React.FC = () => {
         // Clear previous messages
         setMessages([]);
 
-        // Validation
-        if (!signupForm.doc || !signupForm.name || !signupForm.username || 
-            !signupForm.email || !signupForm.password || !signupForm.confirmPassword) {
-            setMessages([{
-                tipo: "warning",
-                texto: "Por favor, preencha todos os campos obrigatórios"
-            }]);
+        // Validate entire form
+        const { errors: validationErrors, isValid } = await signupValidation.validateForm(signupForm);
+        
+        if (!isValid) {
+            signupValidation.setFormErrors(validationErrors);
             return;
         }
 
-        // Email validation
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(signupForm.email)) {
-            setMessages([{
-                tipo: "warning",
-                texto: "Por favor, insira um email válido"
-            }]);
-            return;
-        }
+        try {
+            const userData: CreateUserRequest = {
+                doc: signupForm.doc,
+                name: signupForm.name,
+                username: signupForm.username,
+                email: signupForm.email,
+                password: signupForm.password,
+                role: ["user"],
+                status: true,
+            };
 
-        // Password match validation
-        if (signupForm.password !== signupForm.confirmPassword) {
-            setMessages([{
-                tipo: "warning",
-                texto: "As senhas não coincidem"
-            }]);
-            return;
-        }
-
-        // Password length validation
-        if (signupForm.password.length < 6) {
-            setMessages([{
-                tipo: "warning",
-                texto: "A senha deve ter no mínimo 6 caracteres"
-            }]);
-            return;
-        }
-
-        const userData: CreateUserRequest = {
-            doc: signupForm.doc,
-            name: signupForm.name,
-            username: signupForm.username,
-            email: signupForm.email,
-            password: signupForm.password,
-            role: ["user"],
-            status: true,
-        };
-
-        const success = await service.signup(userData);
-        if (success) {
-            setMessages([{
-                tipo: "success",
-                texto: "Conta criada com sucesso! Faça login para continuar."
-            }]);
-            setShowSignupModal(false);
-            // Reset form
-            setSignupForm({
-                doc: "",
-                name: "",
-                username: "",
-                email: "",
-                password: "",
-                confirmPassword: "",
-            });
-        } else {
+            const success = await service.signup(userData);
+            if (success) {
+                setMessages([{
+                    tipo: "success",
+                    texto: "Conta criada com sucesso! Faça login para continuar."
+                }]);
+                setShowSignupModal(false);
+                // Reset form and validation
+                setSignupForm({
+                    doc: "",
+                    name: "",
+                    username: "",
+                    email: "",
+                    password: "",
+                    confirmPassword: "",
+                });
+                signupValidation.resetValidation();
+            } else {
+                setMessages([{
+                    tipo: "danger",
+                    texto: "Erro ao criar conta. Verifique os dados e tente novamente."
+                }]);
+            }
+        } catch (err: any) {
+            console.error(err);
             setMessages([{
                 tipo: "danger",
-                texto: "Erro ao criar conta. Verifique os dados e tente novamente."
+                texto: "Um erro inesperado aconteceu, tente novamente mais tarde."
             }]);
         }
+    };
+
+    // Handle signup field change with real-time validation
+    const handleSignupFieldChange = async (field: keyof SignupFormErrors, value: string) => {
+        const updatedForm = { ...signupForm, [field]: value };
+        setSignupForm(updatedForm);
+        await signupValidation.handleFieldChange(field, value, updatedForm);
+    };
+
+    // Handle signup field blur
+    const handleSignupFieldBlur = async (field: keyof SignupFormErrors, value: string) => {
+        await signupValidation.handleFieldBlur(field, value);
     };
 
     return (
@@ -215,10 +225,13 @@ export const LoginForm: React.FC = () => {
 
                     <div className="field mt-4">
                         {/* inputs here */}
-                        <button type="submit" className="button is-fullwidth login-button">Sign in</button>
-                        {/*  <button onClick={submit} className="button is-fullwidth login-button">
+                        <button 
+                            type="submit" 
+                            className={`button is-fullwidth login-button ${isSubmitting ? 'is-loading' : ''}`}
+                            disabled={isSubmitting}
+                        >
                             Sign in
-                        </button> */}
+                        </button>
                     </div>
 
                     {messages.map((msg, index) => (
@@ -262,89 +275,101 @@ export const LoginForm: React.FC = () => {
                                 <label className="label">CPF *</label>
                                 <div className="control">
                                     <input
-                                        className="input"
+                                        className={`input ${signupValidation.errors?.doc ? 'is-danger' : ''}`}
                                         type="text"
                                         placeholder="000.000.000-00"
                                         value={signupForm.doc}
-                                        onChange={(e) => setSignupForm({ ...signupForm, doc: e.target.value })}
+                                        onChange={(e) => handleSignupFieldChange('doc', e.target.value)}
+                                        onBlur={(e) => handleSignupFieldBlur('doc', e.target.value)}
                                     />
                                 </div>
+                                {signupValidation.errors?.doc && <p className="help is-danger">{signupValidation.errors.doc}</p>}
                             </div>
 
                             <div className="field">
                                 <label className="label">Nome Completo *</label>
                                 <div className="control">
                                     <input
-                                        className="input"
+                                        className={`input ${signupValidation.errors?.name ? 'is-danger' : ''}`}
                                         type="text"
                                         placeholder="Seu nome completo"
                                         value={signupForm.name}
-                                        onChange={(e) => setSignupForm({ ...signupForm, name: e.target.value })}
+                                        onChange={(e) => handleSignupFieldChange('name', e.target.value)}
+                                        onBlur={(e) => handleSignupFieldBlur('name', e.target.value)}
                                     />
                                 </div>
+                                {signupValidation.errors?.name && <p className="help is-danger">{signupValidation.errors.name}</p>}
                             </div>
 
                             <div className="field">
                                 <label className="label">Usuário *</label>
                                 <div className="control">
                                     <input
-                                        className="input"
+                                        className={`input ${signupValidation.errors?.username ? 'is-danger' : ''}`}
                                         type="text"
                                         placeholder="username"
                                         value={signupForm.username}
-                                        onChange={(e) => setSignupForm({ ...signupForm, username: e.target.value })}
+                                        onChange={(e) => handleSignupFieldChange('username', e.target.value)}
+                                        onBlur={(e) => handleSignupFieldBlur('username', e.target.value)}
                                     />
                                 </div>
+                                {signupValidation.errors?.username && <p className="help is-danger">{signupValidation.errors.username}</p>}
                             </div>
 
                             <div className="field">
                                 <label className="label">Email *</label>
                                 <div className="control">
                                     <input
-                                        className="input"
+                                        className={`input ${signupValidation.errors?.email ? 'is-danger' : ''}`}
                                         type="email"
                                         placeholder="email@exemplo.com"
                                         value={signupForm.email}
-                                        onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
+                                        onChange={(e) => handleSignupFieldChange('email', e.target.value)}
+                                        onBlur={(e) => handleSignupFieldBlur('email', e.target.value)}
                                     />
                                 </div>
+                                {signupValidation.errors?.email && <p className="help is-danger">{signupValidation.errors.email}</p>}
                             </div>
 
                             <div className="field">
                                 <label className="label">Senha *</label>
                                 <div className="control">
                                     <input
-                                        className="input"
+                                        className={`input ${signupValidation.errors?.password ? 'is-danger' : ''}`}
                                         type="password"
                                         placeholder="Mínimo 6 caracteres"
                                         value={signupForm.password}
-                                        onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
+                                        onChange={(e) => handleSignupFieldChange('password', e.target.value)}
+                                        onBlur={(e) => handleSignupFieldBlur('password', e.target.value)}
                                     />
                                 </div>
+                                {signupValidation.errors?.password && <p className="help is-danger">{signupValidation.errors.password}</p>}
                             </div>
 
                             <div className="field">
                                 <label className="label">Confirmar Senha *</label>
                                 <div className="control">
                                     <input
-                                        className="input"
+                                        className={`input ${signupValidation.errors?.confirmPassword ? 'is-danger' : ''}`}
                                         type="password"
                                         placeholder="Digite a senha novamente"
                                         value={signupForm.confirmPassword}
-                                        onChange={(e) => setSignupForm({ ...signupForm, confirmPassword: e.target.value })}
+                                        onChange={(e) => handleSignupFieldChange('confirmPassword', e.target.value)}
+                                        onBlur={(e) => handleSignupFieldBlur('confirmPassword', e.target.value)}
                                     />
                                 </div>
+                                {signupValidation.errors?.confirmPassword && <p className="help is-danger">{signupValidation.errors.confirmPassword}</p>}
                             </div>
                         </section>
-                        <footer className="modal-card-foot">
-                            <button className="button is-dark" onClick={handleSignupSubmit}>
-                                Criar Conta
-                            </button>
+                        <footer className="modal-card-foot is-justify-content-space-between">
                             <button 
-                                className="button is-dark is-outlined" 
+                                className="button is-danger" 
                                 onClick={() => setShowSignupModal(false)}
                             >
                                 Cancelar
+                            </button>
+                            <button className="button is-success" onClick={handleSignupSubmit}>
+                                Criar Conta
                             </button>
                         </footer>
                     </div>

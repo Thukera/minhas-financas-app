@@ -5,6 +5,8 @@ import { DomicilePanel, FinancesPanel } from "./panel"
 import { Panel } from "../common/panel"
 import { RecurrentPaymentsPanel } from "./panel/recurrent"
 import { useRouter } from 'next/navigation';
+import { Loader } from '../common/loader';
+import { getAuthRedirectDelay } from '@/lib/utils/config';
 
 
 interface HomePageProps {
@@ -18,13 +20,29 @@ export const HomePage: React.FC = () => {
     useEffect(() => {
         const signed = localStorage.getItem("signed") === "true";
         if (!signed) {
-            router.replace("/login");
+            const delay = getAuthRedirectDelay();
+            const timer = setTimeout(() => {
+                router.replace("/login");
+            }, delay);
+            
+            return () => clearTimeout(timer);
         } else {
             setLoading(false);
         }
     }, []);
 
-    if (loading) return <div className="has-text-centered mt-6">Verifying login...</div>;
+    if (loading) {
+        return (
+            <Layout>
+                <Panel>
+                    <div className="box">
+                        <Loader size="medium" text="Verificando autenticação..." />
+                    </div>
+                </Panel>
+            </Layout>
+        );
+    }
+    
     // render home page content
     return (
         <Layout>
