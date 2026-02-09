@@ -8,18 +8,18 @@ import { getAuthRedirectDelay } from '@/lib/utils/config';
 
 export const Domicilio: React.FC = () => {
     const router = useRouter();
-        const [loading, setLoading] = useState(true);
     
-        useEffect(() => {
-            const signed = localStorage.getItem("signed") === "true";
-            if (!signed) {
+    useEffect(() => {
+        const signed = localStorage.getItem("signed") === "true";
+        if (!signed) {
             const delay = getAuthRedirectDelay();
             const timer = setTimeout(() => {
                 router.replace("/login");
             }, delay);
             
             return () => clearTimeout(timer);
-        }, []);
+        }
+    }, [router]);
 
     return (
         <Layout>
@@ -36,7 +36,7 @@ export const Domicilio: React.FC = () => {
                         { conta: "NET AP", valor: 111.79, vencimento: "10/07/2025", pago: true, responsavel: { name: "Thuk", avatarUrl: "/user.png" } },
                     ]}
                 />
-            </ Panel>
+            </Panel>
         </Layout>
     )
 }
