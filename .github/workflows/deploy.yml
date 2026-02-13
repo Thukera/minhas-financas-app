@@ -3,9 +3,13 @@ name: 🚀 Deploy Frontend to Orange Pi
 on:
   push:
     branches:
-      #- master
-      - cicd
+      - master
 
+concurrency:
+  group: production
+  cancel-in-progress: true
+
+  
 jobs:
   deploy:
     name: Deploy to Production
