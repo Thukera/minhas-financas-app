@@ -44,11 +44,11 @@ export const creditCardValidationSchema = yup.object().shape({
         .number()
         .min(1, "Dia deve estar entre 1 e 31")
         .max(31, "Dia deve estar entre 1 e 31")
-        .required(ValidationMessages.required)
-        .test('after-start', 'Deve ser após o início do período', function(value) {
-            const { billingPeriodStart } = this.parent;
-            return value > billingPeriodStart;
-        }),
+        .required(ValidationMessages.required),
+        //.test('after-start', 'Deve ser após o início do período', function(value) {
+        //    const { billingPeriodStart } = this.parent;
+        //    return value > billingPeriodStart;
+        //}),
     
     totalLimit: yup
         .number()
