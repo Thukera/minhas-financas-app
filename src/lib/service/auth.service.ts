@@ -1,7 +1,7 @@
 import { AxiosResponse } from "axios";
 import { httpClient } from "../http";
 import { Login } from "../models/login";
-import { useUser } from "@/context/userContext";
+import { isAuthDebugEnabled } from "@/lib/utils/config";
 
 const signInEndpoint: string = "api/cookie/signin";
 const refreshEndpoint: string = "api/cookie/refresh";
@@ -18,17 +18,34 @@ export interface CreateUserRequest {
 }
 
 export const useAuthService = () => {
+    const authDebug = isAuthDebugEnabled() && typeof window !== "undefined";
 
     const signin = async (login: Login): Promise<boolean> => {
         try {
-            const response = await httpClient.post(signInEndpoint, login);
-            // login successful → mark in localStorage
-            localStorage.setItem("signed", "true");
-            //await useUser().setUser(response.data.user); 
+            if (authDebug) {
+                console.info("[AUTH_DEBUG][SIGNIN] start", {
+                    username: login.username,
+                    origin: window.location.origin,
+                });
+            }
+
+            await httpClient.post(signInEndpoint, login);
+
+            if (authDebug) {
+                console.info("[AUTH_DEBUG][SIGNIN] success", {
+                    note: "If /panel still returns 401/403, cookie may be blocked or not persisted by browser policy.",
+                });
+            }
+
             return true;
         } catch (error) {
             console.error("Login failed", error);
             localStorage.removeItem("signed");
+
+            if (authDebug) {
+                console.error("[AUTH_DEBUG][SIGNIN] failed", error);
+            }
+
             return false;
         }
     };

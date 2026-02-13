@@ -33,6 +33,7 @@ export const CreditPage: React.FC = () => {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loadingPurchases, setLoadingPurchases] = useState(false);
   const [messages, setMessages] = useState<Array<Alert>>([]);
+  const [plannedValue, setPlannedValue] = useState<number>(0);
 
   // Real-time validation for credit card form
   const cardValidation = useFormValidation<CreditCardFormData>({
@@ -69,6 +70,8 @@ export const CreditPage: React.FC = () => {
   const handleInvoiceSwitch = async (invoice: Invoice) => {
     setActiveInvoice(invoice);
     await loadPurchases(invoice.id);
+    // Reset planned value when switching invoices
+    setPlannedValue(invoice.totalAmount);
   };
 
   // Load purchases for invoice
@@ -417,18 +420,38 @@ export const CreditPage: React.FC = () => {
             <p>Vencimento: {activeInvoice.dueDate}</p>
             <p>Status: {activeInvoice.status}</p>
 
+            {/* Planned Value Input */}
+            <div className="field" style={{ marginTop: "1rem", marginBottom: "1rem" }}>
+              <label className="label is-size-7">Valor Planejado:</label>
+              <div className="control" style={{ maxWidth: "250px" }}>
+                <input
+                  className="input is-small"
+                  type="number"
+                  step="0.01"
+                  placeholder="Defina o valor planejado"
+                  value={plannedValue || ""}
+                  onChange={(e) => setPlannedValue(Number(e.target.value))}
+                />
+              </div>
+            </div>
+
             {/* progress bar */}
-            <p className="has-text-weight-bold is-size-4" style={{ paddingLeft: '1.5rem' }}>
-              {(activeInvoice.totalAmount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-            </p>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+              <p className="has-text-weight-bold is-size-4">
+                {(activeInvoice.totalAmount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+              </p>
+              <p className="has-text-grey is-size-6">
+                {plannedValue > 0 ? formatCurrency(plannedValue) : "Sem limite"}
+              </p>
+            </div>
             <div style={{ width: "100%" }}>
               <progress
                 className="progress is-medium"
-                value={activeInvoice.totalAmount / 2}
-                max={activeInvoice.totalAmount}
+                value={activeInvoice.totalAmount}
+                max={plannedValue > 0 ? plannedValue : activeInvoice.totalAmount}
                 style={{
                   "--bulma-progress-bar-background-color": "#d3d3d3ff",
-                  "--bulma-progress-value-background-color": "#36a2eb",
+                  "--bulma-progress-value-background-color": activeInvoice.totalAmount > plannedValue ? "#ff3860" : "#36a2eb",
                 } as React.CSSProperties}
               />
             </div>

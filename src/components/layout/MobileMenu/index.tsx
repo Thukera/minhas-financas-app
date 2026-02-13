@@ -77,7 +77,7 @@ export const MobileMenu: React.FC = () => {
             </a>
           </li>
           <li>
-            <a href="#">
+            <a href="/rendimentos">
               <DollarSign size={20} style={{ marginRight: "0.5rem" }} /> Rendimentos
             </a>
           </li>

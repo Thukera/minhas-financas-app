@@ -13,3 +13,11 @@ export const getAuthRedirectDelay = (): number => {
 export const getApiTimeout = (): number => {
     return parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || "30000", 10);
 };
+
+/**
+ * Enable auth debug logs in browser console.
+ * Set NEXT_PUBLIC_AUTH_DEBUG=true in .env to activate.
+ */
+export const isAuthDebugEnabled = (): boolean => {
+    return process.env.NEXT_PUBLIC_AUTH_DEBUG === "true";
+};

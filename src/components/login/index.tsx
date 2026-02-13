@@ -16,6 +16,7 @@ import {
     SignupFormErrors 
 } from '@/lib/validations';
 import { getAuthRedirectDelay } from '@/lib/utils/config';
+import { isAuthDebugEnabled } from '@/lib/utils/config';
 import { useFormValidation } from '@/hooks/useFormValidation';
 
 export const LoginForm: React.FC = () => {
@@ -31,6 +32,55 @@ export const LoginForm: React.FC = () => {
     const router = useRouter();
     const { setUser } = useUser();
     const { getUserDetails } = usePanelService();
+    const authDebug = isAuthDebugEnabled() && typeof window !== "undefined";
+
+    const logBrowserCookieDiagnostics = async () => {
+        if (!authDebug || typeof window === "undefined") return;
+
+        const storageAccessSupported = typeof document.hasStorageAccess === "function";
+        const hasStorageAccess = storageAccessSupported
+            ? await document.hasStorageAccess()
+            : "not-supported";
+
+        console.info("[AUTH_DEBUG][BROWSER] context", {
+            origin: window.location.origin,
+            protocol: window.location.protocol,
+            isSecureContext: window.isSecureContext,
+            cookieEnabled: navigator.cookieEnabled,
+            hasStorageAccess,
+            storageAccessSupported,
+            userAgent: navigator.userAgent,
+        });
+    };
+
+    const waitForAuthenticatedUser = async (maxAttempts = 5, delayMs = 300) => {
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            if (authDebug) {
+                console.info("[AUTH_DEBUG][PANEL_CHECK] attempt", {
+                    attempt,
+                    maxAttempts,
+                });
+            }
+
+            const userData = await getUserDetails();
+            if (userData) {
+                if (authDebug) {
+                    console.info("[AUTH_DEBUG][PANEL_CHECK] success", { attempt });
+                }
+                return userData;
+            }
+
+            if (authDebug) {
+                console.warn("[AUTH_DEBUG][PANEL_CHECK] empty response", { attempt });
+            }
+
+            if (attempt < maxAttempts) {
+                await new Promise((resolve) => setTimeout(resolve, delayMs));
+            }
+        }
+
+        return null;
+    };
 
     // Real-time validation for signup form
     const signupValidation = useFormValidation<SignupFormErrors>({
@@ -72,6 +122,8 @@ export const LoginForm: React.FC = () => {
 
         setIsSubmitting(true);
 
+        await logBrowserCookieDiagnostics();
+
         try {
             // Validate form
             await loginValidationSchema.validate({ username, password }, { abortEarly: false });
@@ -80,8 +132,28 @@ export const LoginForm: React.FC = () => {
             // Call signin service
             const signed = await service.signin(login);
             if (signed) {
-                const userData = await getUserDetails();
-                setUser(userData ?? null);
+                const userData = await waitForAuthenticatedUser();
+
+                if (!userData) {
+                    localStorage.removeItem("signed");
+                    setUser(null);
+
+                    if (authDebug) {
+                        console.error("[AUTH_DEBUG][SESSION] panel remained unauthorized after signin", {
+                            hint: "Likely cookie blocked or missing SameSite=None; Secure for cross-site requests.",
+                        });
+                    }
+
+                    setMessages([{
+                        tipo: "danger",
+                        texto: "Login realizado, mas não foi possível confirmar a sessão. Tente novamente."
+                    }]);
+                    setIsSubmitting(false);
+                    return;
+                }
+
+                localStorage.setItem("signed", "true");
+                setUser(userData);
                 router.push("/home");
             } else {
                 // Login failed - show error message

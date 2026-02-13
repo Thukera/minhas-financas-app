@@ -15,7 +15,7 @@ interface DesktopMenuProps {
 }
 
 const links = [
-  { name: "Rendimentos", icon: DollarSign, href: "#" },
+  { name: "Rendimentos", icon: DollarSign, href: "/rendimentos" },
   { name: "Compras", icon: ShoppingBag, href: "/compras" },
   { name: "Residência", icon: House, href: "/domicilio" },
   { name: "Crédito", icon: CreditCard, href: "/credito" },

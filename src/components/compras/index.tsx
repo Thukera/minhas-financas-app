@@ -30,10 +30,15 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, onSave 
           <button className="delete" aria-label="close" onClick={onClose}></button>
         </header>
         <section className="modal-card-body">{children}</section>
-        <footer className="modal-card-foot">
-          <button className="button is-dark" onClick={onSave}>Salvar</button>
-          <button className="button is-dark is-outlined" onClick={onClose}>
+        <footer className="modal-card-foot is-justify-content-space-between">
+          <button 
+            className="button is-danger" 
+            onClick={onClose}
+          >
             Cancelar
+          </button>
+          <button className="button is-success" onClick={onSave}>
+            Salvar
           </button>
         </footer>
       </div>

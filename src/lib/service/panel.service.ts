@@ -1,4 +1,4 @@
-import { AxiosResponse } from "axios";
+import { AxiosError, AxiosResponse } from "axios";
 import { httpClient } from "../http";
 import { User } from "../models/user";
 import { CreditCard } from "../models/user/creditcard";
@@ -90,7 +90,12 @@ export const usePanelService = () => {
             return response.data as User;
         } catch (error) {
             console.error("Failed to get user details", error);
-            localStorage.removeItem("signed");
+
+            const statusCode = (error as AxiosError)?.response?.status;
+            if (statusCode === 401 || statusCode === 403) {
+                localStorage.removeItem("signed");
+            }
+
             return null; // indicate failure
         }
     };
