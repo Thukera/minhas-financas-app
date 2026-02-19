@@ -16,6 +16,7 @@ export interface Invoice {
     dueDate: string;
     totalAmount: number;
     totalPlanned?: number;  // optional, can be calculated later
+    estimateLimit?: number | null;  // Backend planned value
     status: "PENDING" | "CLOSED" | "PAID" | "OPEN";
 }
 

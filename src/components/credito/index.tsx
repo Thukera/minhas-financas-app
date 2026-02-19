@@ -9,7 +9,7 @@ import ResponsiveTable from "@/components/common/table";
 import "./tabs.css";
 import { PieChart } from "react-minimal-pie-chart";
 import { useUser } from "@/context/userContext";
-import { usePanelService, Purchase, CreateCreditCardRequest } from "@/lib/service";
+import { usePanelService, Purchase, CreateCreditCardRequest, UpdateCreditCardRequest, CreditPanel, PurchaseDetails, CreatePurchaseRequest } from "@/lib/service";
 import { Alert, Message } from "../common/message";
 import { creditCardValidationSchema, CreditCardFormData } from "@/lib/validations";
 import { Loader } from "../common/loader";
@@ -20,11 +20,20 @@ import { useFormValidation } from '@/hooks/useFormValidation';
 const formatCurrency = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+// Helper function to generate colors for categories
+const getCategoryColor = (index: number): string => {
+  const colors = [
+    "#fbc658", "#36a2eb", "#ff6384", "#4bc0c0", 
+    "#9966ff", "#ff9f40", "#ffcd56", "#c9cbcf"
+  ];
+  return colors[index % colors.length];
+};
+
 
 export const CreditPage: React.FC = () => {
   const router = useRouter();
   const { user, isLoading: userLoading } = useUser();
-  const { getUserDetails, getInvoiceDetails, getCreditCardDetails, createCreditCard } = usePanelService();
+  const { getUserDetails, getInvoiceDetails, getCreditCardDetails, createCreditCard, updateInvoiceEstimateLimit, changeInvoiceStatus, getPurchaseDetails, createCreditCardPurchase, updatePurchase, updateCreditCard } = usePanelService();
 
   const [loading, setLoading] = useState(true);
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
@@ -34,6 +43,14 @@ export const CreditPage: React.FC = () => {
   const [loadingPurchases, setLoadingPurchases] = useState(false);
   const [messages, setMessages] = useState<Array<Alert>>([]);
   const [plannedValue, setPlannedValue] = useState<number>(0);
+  const [creditPanel, setCreditPanel] = useState<CreditPanel | null>(null);
+
+  // Modal-specific messages
+  const [cardFormMessages, setCardFormMessages] = useState<Array<Alert>>([]);
+  const [editCardMessages, setEditCardMessages] = useState<Array<Alert>>([]);
+  const [plannedValueMessages, setPlannedValueMessages] = useState<Array<Alert>>([]);
+  const [statusMessages, setStatusMessages] = useState<Array<Alert>>([]);
+  const [purchaseFormMessages, setPurchaseFormMessages] = useState<Array<Alert>>([]);
 
   // Real-time validation for credit card form
   const cardValidation = useFormValidation<CreditCardFormData>({
@@ -44,6 +61,17 @@ export const CreditPage: React.FC = () => {
 
   // Modal state
   const [showAddCardModal, setShowAddCardModal] = useState(false);
+  const [showEditCardModal, setShowEditCardModal] = useState(false);
+  const [showPlannedValueModal, setShowPlannedValueModal] = useState(false);
+  const [tempPlannedValue, setTempPlannedValue] = useState<number>(0);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<string>("");
+  const [showPurchaseDetailsModal, setShowPurchaseDetailsModal] = useState(false);
+  const [purchaseDetails, setPurchaseDetails] = useState<PurchaseDetails | null>(null);
+  const [loadingPurchaseDetails, setLoadingPurchaseDetails] = useState(false);
+  const [showPurchaseFormModal, setShowPurchaseFormModal] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingPurchaseId, setEditingPurchaseId] = useState<number | null>(null);
 
   // Credit card form state
   const [cardForm, setCardForm] = useState({
@@ -54,6 +82,28 @@ export const CreditPage: React.FC = () => {
     billingPeriodStart: 1,
     billingPeriodEnd: 30,
     totalLimit: 0,
+  });
+
+  // Edit credit card form state
+  const [editCardForm, setEditCardForm] = useState({
+    bank: "",
+    endNumbers: "",
+    dueDate: 5,
+    nickname: "",
+    billingPeriodStart: 1,
+    billingPeriodEnd: 30,
+    estimateLimitForinvoices: 0,
+    totalLimit: 0,
+  });
+
+  // Purchase form state
+  const [purchaseForm, setPurchaseForm] = useState({
+    descricao: "",
+    creditCardId: 0,
+    totalInstallments: 1,
+    category: "",
+    purchaseDateTime: new Date().toISOString().slice(0, 16),
+    value: 0,
   });
 
   // Filter invoices: 2 before current + current + 7 after (max 10)
@@ -70,8 +120,6 @@ export const CreditPage: React.FC = () => {
   const handleInvoiceSwitch = async (invoice: Invoice) => {
     setActiveInvoice(invoice);
     await loadPurchases(invoice.id);
-    // Reset planned value when switching invoices
-    setPlannedValue(invoice.totalAmount);
   };
 
   // Load purchases for invoice
@@ -81,19 +129,26 @@ export const CreditPage: React.FC = () => {
       const details = await getInvoiceDetails(invoiceId);
       if (details?.purchases) {
         setPurchases(details.purchases);
+        setCreditPanel(details.creditPanel || null);
+        // Set planned value from backend estimateLimit or fall back to totalAmount
+        setPlannedValue(details.estimateLimit ?? details.totalAmount);
       } else {
         setPurchases([]);
+        setCreditPanel(null);
+        setPlannedValue(0);
       }
     } catch (error) {
       console.error("Failed to load purchases", error);
       setPurchases([]);
+      setCreditPanel(null);
+      setPlannedValue(0);
     } finally {
       setLoadingPurchases(false);
     }
   };
 
   const handleAddCard = async () => {
-    setMessages([]);
+    setCardFormMessages([]);
 
     // Validate entire form
     const { errors: validationErrors, isValid } = await cardValidation.validateForm(cardForm);
@@ -116,11 +171,10 @@ export const CreditPage: React.FC = () => {
 
       const success = await createCreditCard(cardData);
       if (success) {
-        setMessages([{
+        setCardFormMessages([{
           tipo: "success",
-          texto: "Cartão adicionado com sucesso!"
+          texto: "Cartão adicionado com sucesso! A página será recarregada."
         }]);
-        setShowAddCardModal(false);
         // Reset form and validation
         setCardForm({
           bank: "",
@@ -132,17 +186,19 @@ export const CreditPage: React.FC = () => {
           totalLimit: 0,
         });
         cardValidation.resetValidation();
-        // Reload cards
-        window.location.reload();
+        // Reload cards after a short delay
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
       } else {
-        setMessages([{
+        setCardFormMessages([{
           tipo: "danger",
           texto: "Erro ao adicionar cartão. Tente novamente."
         }]);
       }
     } catch (err: any) {
       console.error(err);
-      setMessages([{
+      setCardFormMessages([{
         tipo: "danger",
         texto: "Um erro inesperado aconteceu, tente novamente mais tarde."
       }]);
@@ -159,6 +215,268 @@ export const CreditPage: React.FC = () => {
   // Handle card field blur
   const handleCardFieldBlur = async (field: keyof CreditCardFormData, value: string | number) => {
     await cardValidation.handleFieldBlur(field, value);
+  };
+
+  // Handle open edit card modal
+  const handleOpenEditCard = () => {
+    if (!activeCard) return;
+    
+    setEditCardForm({
+      bank: activeCard.bank,
+      endNumbers: activeCard.endnumbers,
+      dueDate: activeCard.billingPeriodEnd, // Using billingPeriodEnd as dueDate based on backend
+      nickname: activeCard.nickname,
+      billingPeriodStart: activeCard.billingPeriodStart,
+      billingPeriodEnd: activeCard.billingPeriodEnd,
+      estimateLimitForinvoices: 0, // Default value, user will set
+      totalLimit: activeCard.totalLimit,
+    });
+    setEditCardMessages([]);
+    setShowEditCardModal(true);
+  };
+
+  // Handle edit card
+  const handleEditCard = async () => {
+    if (!activeCard) return;
+    
+    setEditCardMessages([]);
+
+    try {
+      const cardData: UpdateCreditCardRequest = {
+        bank: editCardForm.bank,
+        endNumbers: editCardForm.endNumbers,
+        dueDate: editCardForm.dueDate,
+        nickname: editCardForm.nickname,
+        billingPeriodStart: editCardForm.billingPeriodStart,
+        billingPeriodEnd: editCardForm.billingPeriodEnd,
+        estimateLimitForinvoices: editCardForm.estimateLimitForinvoices,
+        totalLimit: editCardForm.totalLimit,
+      };
+
+      const success = await updateCreditCard(activeCard.id, cardData);
+      if (success) {
+        setEditCardMessages([{
+          tipo: "success",
+          texto: "Cartão atualizado com sucesso! A página será recarregada."
+        }]);
+        // Reload page after a short delay
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        setEditCardMessages([{
+          tipo: "danger",
+          texto: "Erro ao atualizar cartão. Tente novamente."
+        }]);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setEditCardMessages([{
+        tipo: "danger",
+        texto: "Um erro inesperado aconteceu, tente novamente mais tarde."
+      }]);
+    }
+  };
+
+  // Handle update planned value
+  const handleUpdatePlannedValue = async () => {
+    if (!activeInvoice) return;
+    
+    setPlannedValueMessages([]);
+    
+    try {
+      const success = await updateInvoiceEstimateLimit(activeInvoice.id, tempPlannedValue);
+      if (success) {
+        setPlannedValue(tempPlannedValue);
+        setPlannedValueMessages([{
+          tipo: "success",
+          texto: "Valor planejado atualizado com sucesso!"
+        }]);
+      } else {
+        setPlannedValueMessages([{
+          tipo: "danger",
+          texto: "Erro ao atualizar valor planejado. Tente novamente."
+        }]);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setPlannedValueMessages([{
+        tipo: "danger",
+        texto: "Um erro inesperado aconteceu, tente novamente mais tarde."
+      }]);
+    }
+  };
+
+  // Handle change invoice status
+  const handleChangeStatus = async () => {
+    if (!activeInvoice || !selectedStatus) return;
+    
+    setStatusMessages([]);
+    
+    try {
+      const success = await changeInvoiceStatus(activeInvoice.id, selectedStatus);
+      if (success) {
+        setStatusMessages([{
+          tipo: "success",
+          texto: "Status da fatura atualizado com sucesso!"
+        }]);
+        // Update local invoice status
+        setActiveInvoice({ ...activeInvoice, status: selectedStatus as any });
+        // Reload to get fresh data
+        await loadPurchases(activeInvoice.id);
+      } else {
+        setStatusMessages([{
+          tipo: "danger",
+          texto: "Erro ao alterar status. Tente novamente."
+        }]);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setStatusMessages([{
+        tipo: "danger",
+        texto: "Um erro inesperado aconteceu, tente novamente mais tarde."
+      }]);
+    }
+  };
+
+  // Handle view purchase details
+  const handleViewPurchaseDetails = async (purchaseId: number) => {
+    setLoadingPurchaseDetails(true);
+    setShowPurchaseDetailsModal(true);
+    setPurchaseDetails(null);
+    
+    try {
+      const details = await getPurchaseDetails(purchaseId);
+      if (details) {
+        setPurchaseDetails(details);
+      } else {
+        setMessages([{
+          tipo: "danger",
+          texto: "Erro ao carregar detalhes da compra."
+        }]);
+        setShowPurchaseDetailsModal(false);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setMessages([{
+        tipo: "danger",
+        texto: "Um erro inesperado aconteceu, tente novamente mais tarde."
+      }]);
+      setShowPurchaseDetailsModal(false);
+    } finally {
+      setLoadingPurchaseDetails(false);
+    }
+  };
+
+  // Handle open purchase form for create
+  const handleOpenCreatePurchase = () => {
+    setIsEditMode(false);
+    setEditingPurchaseId(null);
+    setPurchaseForm({
+      descricao: "",
+      creditCardId: activeCard?.id || 0,
+      totalInstallments: 1,
+      category: "",
+      purchaseDateTime: new Date().toISOString().slice(0, 16),
+      value: 0,
+    });
+    setPurchaseFormMessages([]);
+    setShowPurchaseFormModal(true);
+  };
+
+  // Handle open purchase form for edit
+  const handleOpenEditPurchase = () => {
+    if (!purchaseDetails) return;
+    
+    setIsEditMode(true);
+    setEditingPurchaseId(purchaseDetails.purchaseId);
+    setPurchaseForm({
+      descricao: purchaseDetails.descricao,
+      creditCardId: activeCard?.id || 0,
+      totalInstallments: purchaseDetails.installments.length || 1,
+      category: purchaseDetails.category.name,
+      purchaseDateTime: new Date(purchaseDetails.purchaseDateTime).toISOString().slice(0, 16),
+      value: purchaseDetails.value,
+    });
+    setPurchaseFormMessages([]);
+    setShowPurchaseDetailsModal(false);
+    setShowPurchaseFormModal(true);
+  };
+
+  // Handle submit purchase form (create or update)
+  const handleSubmitPurchaseForm = async () => {
+    setPurchaseFormMessages([]);
+    
+    if (!purchaseForm.descricao || !purchaseForm.category || purchaseForm.value <= 0) {
+      setPurchaseFormMessages([{
+        tipo: "warning",
+        texto: "Por favor, preencha todos os campos obrigatórios"
+      }]);
+      return;
+    }
+
+    try {
+      if (isEditMode && editingPurchaseId) {
+        // Update existing purchase
+        const updateData = {
+          descricao: purchaseForm.descricao,
+          creditCardId: purchaseForm.creditCardId,
+          totalInstallments: purchaseForm.totalInstallments,
+          category: purchaseForm.category,
+          value: purchaseForm.value,
+        };
+        
+        const success = await updatePurchase(editingPurchaseId, updateData);
+        if (success) {
+          setPurchaseFormMessages([{
+            tipo: "success",
+            texto: "Compra atualizada com sucesso!"
+          }]);
+          // Reload purchases
+          if (activeInvoice) {
+            await loadPurchases(activeInvoice.id);
+          }
+        } else {
+          setPurchaseFormMessages([{
+            tipo: "danger",
+            texto: "Erro ao atualizar compra. Tente novamente."
+          }]);
+        }
+      } else {
+        // Create new purchase
+        const purchaseData: CreatePurchaseRequest = {
+          descricao: purchaseForm.descricao,
+          creditCardId: purchaseForm.creditCardId,
+          totalInstallments: purchaseForm.totalInstallments,
+          category: purchaseForm.category,
+          purchaseDateTime: new Date(purchaseForm.purchaseDateTime).toISOString(),
+          value: purchaseForm.value,
+        };
+
+        const success = await createCreditCardPurchase(purchaseData);
+        if (success) {
+          setPurchaseFormMessages([{
+            tipo: "success",
+            texto: "Compra cadastrada com sucesso!"
+          }]);
+          // Reload purchases
+          if (activeInvoice) {
+            await loadPurchases(activeInvoice.id);
+          }
+        } else {
+          setPurchaseFormMessages([{
+            tipo: "danger",
+            texto: "Erro ao cadastrar compra. Tente novamente."
+          }]);
+        }
+      }
+    } catch (err: any) {
+      console.error(err);
+      setPurchaseFormMessages([{
+        tipo: "danger",
+        texto: "Um erro inesperado aconteceu, tente novamente mais tarde."
+      }]);
+    }
   };
 
   useEffect(() => {
@@ -285,7 +603,10 @@ export const CreditPage: React.FC = () => {
             <h3 className="title is-5 mb-0">Meus Cartões</h3>
             <button 
               className="button is-success is-small"
-              onClick={() => setShowAddCardModal(true)}
+              onClick={() => {
+                setCardFormMessages([]);
+                setShowAddCardModal(true);
+              }}
               title="Adicionar novo cartão"
             >
               <span className="icon">
@@ -325,10 +646,24 @@ export const CreditPage: React.FC = () => {
             <>             
               <div className="columns is-vcentered mb-3">
                 <div className="column">
-                  <h2 className="title is-4 has-text-white mb-2">{activeCard.nickname}</h2>
-                  <p className="subtitle is-6 has-text-grey-light mb-0">
-                    {activeCard.bank} • Final {activeCard.endnumbers}
-                  </p>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <h2 className="title is-4 has-text-white mb-2">{activeCard.nickname}</h2>
+                      <p className="subtitle is-6 has-text-grey-light mb-0">
+                        {activeCard.bank} • Final {activeCard.endnumbers}
+                      </p>
+                    </div>
+                    <button 
+                      className="button is-small is-warning"
+                      onClick={handleOpenEditCard}
+                      title="Editar cartão"
+                    >
+                      <span className="icon">
+                        <span>✏️</span>
+                      </span>
+                      <span className="is-hidden-mobile">Editar</span>
+                    </button>
+                  </div>
                 </div>
               </div>
               
@@ -357,45 +692,114 @@ export const CreditPage: React.FC = () => {
         </div>
 
         {/* --- Pie Charts --- */}
-        {activeCard && (
+        {activeCard && creditPanel && (
           <div className="columns mt-4">
             <div className="column has-text-centered">
               <PieChart
                 data={[
-                  { title: "Used", value: activeCard.usedLimit, color: "#eb1212ff" },
-                  { title: "Available", value: Math.max(activeCard.totalLimit - activeCard.usedLimit, 0), color: "#54eb36ff" },
+                  { 
+                    title: "Utilizado", 
+                    value: creditPanel.usedLimit, 
+                    color: "#eb1212ff" 
+                  },
+                  { 
+                    title: "Disponível", 
+                    value: Math.max(creditPanel.totalLimit - creditPanel.usedLimit, 0), 
+                    color: "#54eb36ff" 
+                  },
                 ]}
                 lineWidth={25}
                 style={{ maxWidth: "360px", margin: "30px" }}
                 animate={true}
+                label={({ dataEntry }) => `${dataEntry.title}: ${formatCurrency(dataEntry.value)}`}
+                labelStyle={{
+                  fontSize: "5px",
+                  fill: "#fff",
+                }}
+                labelPosition={70}
               />
-              <p className="mt-2">Limite</p>
+              <p className="mt-2 has-text-weight-semibold">Limite Total</p>
+              <p className="is-size-7 has-text-grey-light">
+                {formatCurrency(creditPanel.usedLimit)} / {formatCurrency(creditPanel.totalLimit)}
+              </p>
+            </div>
+
+            <div className="column has-text-centered">
+              {creditPanel.categoryPanel && creditPanel.categoryPanel.length > 0 ? (
+                <>
+                  <PieChart
+                    data={creditPanel.categoryPanel.map((cat, index) => ({
+                      title: cat.category,
+                      value: cat.value,
+                      color: getCategoryColor(index),
+                    }))}
+                    lineWidth={25}
+                    style={{ maxWidth: "360px", margin: "30px" }}
+                    animate={true}
+                    label={({ dataEntry }) => `${dataEntry.title}: ${formatCurrency(dataEntry.value)}`}
+                    labelStyle={{
+                      fontSize: "5px",
+                      fill: "#fff",
+                    }}
+                    labelPosition={70}
+                  />
+                  <p className="mt-2 has-text-weight-semibold">Categorias</p>
+                  <div className="is-size-7 has-text-grey-light" style={{ maxWidth: "250px", margin: "0 auto" }}>
+                    {creditPanel.categoryPanel.map((cat, index) => (
+                      <div key={index} style={{ display: "flex", justifyContent: "space-between", padding: "0.2rem 0" }}>
+                        <span style={{ display: "flex", alignItems: "center" }}>
+                          <span 
+                            style={{ 
+                              width: "10px", 
+                              height: "10px", 
+                              backgroundColor: getCategoryColor(index),
+                              display: "inline-block",
+                              marginRight: "0.5rem",
+                              borderRadius: "2px"
+                            }}
+                          />
+                          {cat.category}
+                        </span>
+                        <span>{formatCurrency(cat.value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="has-text-grey-light">
+                  <p>Sem dados de categorias</p>
+                </div>
+              )}
             </div>
 
             <div className="column has-text-centered">
               <PieChart
                 data={[
-                  { title: "Categoria1", value: 2000, color: "#fbc658" },
-                  { title: "Categoria2", value: 3000, color: "#36a2eb" },
+                  { 
+                    title: "Pagas", 
+                    value: creditPanel.paydInstallments, 
+                    color: "#36a2eb" 
+                  },
+                  { 
+                    title: "Pendentes", 
+                    value: Math.max(creditPanel.totalInstallments - creditPanel.paydInstallments, 0), 
+                    color: "#ff6384" 
+                  },
                 ]}
                 lineWidth={25}
                 style={{ maxWidth: "360px", margin: "30px" }}
                 animate={true}
+                label={({ dataEntry }) => `${dataEntry.title}: ${formatCurrency(dataEntry.value)}`}
+                labelStyle={{
+                  fontSize: "5px",
+                  fill: "#fff",
+                }}
+                labelPosition={70}
               />
-              <p className="mt-2">Categorias</p>
-            </div>
-
-            <div className="column has-text-centered">
-              <PieChart
-                data={[
-                  { title: "Pagas", value: 2, color: "#36a2eb" },
-                  { title: "Pendentes", value: 1, color: "#ff6384" },
-                ]}
-                lineWidth={25}
-                style={{ maxWidth: "360px", margin: "30px" }}
-                animate={true}
-              />
-              <p className="mt-2">Parcelas pagas</p>
+              <p className="mt-2 has-text-weight-semibold">Parcelas</p>
+              <p className="is-size-7 has-text-grey-light">
+                {formatCurrency(creditPanel.paydInstallments)} / {formatCurrency(creditPanel.totalInstallments)}
+              </p>
             </div>
           </div>
         )}
@@ -417,21 +821,40 @@ export const CreditPage: React.FC = () => {
                 ))}
               </div>
             </div>
-            <p>Vencimento: {activeInvoice.dueDate}</p>
-            <p>Status: {activeInvoice.status}</p>
-
-            {/* Planned Value Input */}
-            <div className="field" style={{ marginTop: "1rem", marginBottom: "1rem" }}>
-              <label className="label is-size-7">Valor Planejado:</label>
-              <div className="control" style={{ maxWidth: "250px" }}>
-                <input
-                  className="input is-small"
-                  type="number"
-                  step="0.01"
-                  placeholder="Defina o valor planejado"
-                  value={plannedValue || ""}
-                  onChange={(e) => setPlannedValue(Number(e.target.value))}
-                />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem", marginTop: "1.5rem" }}>
+              <div>
+                <p>Vencimento: {activeInvoice.dueDate}</p>
+                <p>Status: {activeInvoice.status}</p>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                <button 
+                  className="button is-small is-info"
+                  onClick={() => {
+                    setTempPlannedValue(plannedValue || activeInvoice.totalAmount);
+                    setPlannedValueMessages([]);
+                    setShowPlannedValueModal(true);
+                  }}
+                  title="Definir valor planejado"
+                >
+                  <span className="icon">
+                    <span style={{ fontSize: "1rem" }}>💰</span>
+                  </span>
+                  <span>Valor Planejado</span>
+                </button>
+                <button 
+                  className="button is-small is-warning"
+                  onClick={() => {
+                    setSelectedStatus(activeInvoice.status);
+                    setStatusMessages([]);
+                    setShowStatusModal(true);
+                  }}
+                  title="Alterar status da fatura"
+                >
+                  <span className="icon">
+                    <span style={{ fontSize: "1rem" }}>🔄</span>
+                  </span>
+                  <span>Alterar Status</span>
+                </button>
               </div>
             </div>
 
@@ -462,7 +885,19 @@ export const CreditPage: React.FC = () => {
         <hr />
         <div className="table-container mt-5">
           <div style={{ marginBottom: "2rem" }}>
-            <h2 className="subtitle is-size-6">Extrato</h2>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <h2 className="subtitle is-size-6 mb-0">Extrato</h2>
+              <button 
+                className="button is-success is-small"
+                onClick={handleOpenCreatePurchase}
+                title="Adicionar nova compra"
+              >
+                <span className="icon">
+                  <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>+</span>
+                </span>
+                <span className="is-hidden-mobile">Nova Compra</span>
+              </button>
+            </div>
             {loadingPurchases ? (
               <div className="box">
                 <Loader size="small" text="Carregando compras..." />
@@ -475,15 +910,32 @@ export const CreditPage: React.FC = () => {
                   { key: "parcela", label: "Parcelas" },
                   { key: "vencimento", label: "VENCIMENTO" },
                   { key: "classificacao", label: "CATEGORIA" },
+                  { 
+                    key: "acoes", 
+                    label: "AÇÕES",
+                    render: (_v, item: any) => (
+                      <button 
+                        className="button is-small is-info"
+                        onClick={() => handleViewPurchaseDetails(item.purchaseId)}
+                        title="Ver detalhes"
+                      >
+                        <span className="icon">
+                          <span>👁️</span>
+                        </span>
+                      </button>
+                    )
+                  },
                 ]}
                 items={purchases.map(p => ({
+                  purchaseId: p.purchaseId,
                   descricao: p.descricao,
                   valor: p.installment ? p.installment.value : p.value,
                   parcela: p.installment 
                     ? `${p.installment.currentInstallment}/${p.installment.totalInstallment}` 
                     : "-",
                   vencimento: activeInvoice?.dueDate || "-",
-                  classificacao: "-" // Add classification later if available
+                  classificacao: p.category || "-",
+                  acoes: null
                 }))}
                 calcTotal={(items) => items.reduce((sum, i) => sum + (i.valor ?? 0), 0)}
                 highlightPaid={false}
@@ -507,6 +959,14 @@ export const CreditPage: React.FC = () => {
                 ></button>
               </header>
               <section className="modal-card-body">
+                {cardFormMessages.map((msg, index) => (
+                  <Message
+                    key={index}
+                    texto={msg.texto}
+                    tipo={msg.tipo}
+                    field={msg.field ?? undefined}
+                  />
+                ))}
                 <div className="field">
                   <label className="label">Apelido do Cartão *</label>
                   <div className="control">
@@ -632,6 +1092,557 @@ export const CreditPage: React.FC = () => {
                 </button>
                 <button className="button is-success" onClick={handleAddCard}>
                   Adicionar
+                </button>
+              </footer>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Credit Card Modal */}
+        {showEditCardModal && (
+          <div className="modal is-active">
+            <div className="modal-background" onClick={() => setShowEditCardModal(false)}></div>
+            <div className="modal-card" style={{ maxWidth: "500px" }}>
+              <header className="modal-card-head">
+                <p className="modal-card-title">Editar Cartão</p>
+                <button 
+                  className="delete" 
+                  aria-label="close" 
+                  onClick={() => setShowEditCardModal(false)}
+                ></button>
+              </header>
+              <section className="modal-card-body">
+                {editCardMessages.map((msg, index) => (
+                  <Message
+                    key={index}
+                    texto={msg.texto}
+                    tipo={msg.tipo}
+                    field={msg.field ?? undefined}
+                  />
+                ))}
+                <div className="field">
+                  <label className="label">Apelido do Cartão *</label>
+                  <div className="control">
+                    <input
+                      className="input"
+                      type="text"
+                      placeholder="Ex: Gold, Platinum, Internacional"
+                      value={editCardForm.nickname}
+                      onChange={(e) => setEditCardForm({ ...editCardForm, nickname: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label className="label">Banco *</label>
+                  <div className="control">
+                    <input
+                      className="input"
+                      type="text"
+                      placeholder="Ex: ITAU, BRADESCO, NUBANK"
+                      value={editCardForm.bank}
+                      onChange={(e) => setEditCardForm({ ...editCardForm, bank: e.target.value.toUpperCase() })}
+                    />
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label className="label">Últimos 4 Dígitos *</label>
+                  <div className="control">
+                    <input
+                      className="input"
+                      type="text"
+                      placeholder="1234"
+                      maxLength={4}
+                      value={editCardForm.endNumbers}
+                      onChange={(e) => setEditCardForm({ ...editCardForm, endNumbers: e.target.value.replace(/\D/g, '') })}
+                    />
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label className="label">Limite Total *</label>
+                  <div className="control">
+                    <input
+                      className="input"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={editCardForm.totalLimit || ""}
+                      onChange={(e) => setEditCardForm({ ...editCardForm, totalLimit: Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label className="label">Limite Estimado para Faturas</label>
+                  <div className="control">
+                    <input
+                      className="input"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={editCardForm.estimateLimitForinvoices || ""}
+                      onChange={(e) => setEditCardForm({ ...editCardForm, estimateLimitForinvoices: Number(e.target.value) })}
+                    />
+                  </div>
+                  <p className="help">Valor estimado de limite para uso em faturas</p>
+                </div>
+
+                <div className="columns">
+                  <div className="column">
+                    <div className="field">
+                      <label className="label">Dia do Vencimento</label>
+                      <div className="control">
+                        <input
+                          className="input"
+                          type="number"
+                          min="1"
+                          max="31"
+                          value={editCardForm.dueDate}
+                          onChange={(e) => setEditCardForm({ ...editCardForm, dueDate: Number(e.target.value) })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="column">
+                    <div className="field">
+                      <label className="label">Início do Período</label>
+                      <div className="control">
+                        <input
+                          className="input"
+                          type="number"
+                          min="1"
+                          max="31"
+                          value={editCardForm.billingPeriodStart}
+                          onChange={(e) => setEditCardForm({ ...editCardForm, billingPeriodStart: Number(e.target.value) })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="column">
+                    <div className="field">
+                      <label className="label">Fim do Período</label>
+                      <div className="control">
+                        <input
+                          className="input"
+                          type="number"
+                          min="1"
+                          max="31"
+                          value={editCardForm.billingPeriodEnd}
+                          onChange={(e) => setEditCardForm({ ...editCardForm, billingPeriodEnd: Number(e.target.value) })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+              <footer className="modal-card-foot is-justify-content-space-between">
+                <button 
+                  className="button is-danger" 
+                  onClick={() => setShowEditCardModal(false)}
+                >
+                  Cancelar
+                </button>
+                <button className="button is-success" onClick={handleEditCard}>
+                  Atualizar
+                </button>
+              </footer>
+            </div>
+          </div>
+        )}
+
+        {/* Planned Value Modal */}
+        {showPlannedValueModal && (
+          <div className="modal is-active">
+            <div className="modal-background" onClick={() => setShowPlannedValueModal(false)}></div>
+            <div className="modal-card" style={{ maxWidth: "400px" }}>
+              <header className="modal-card-head">
+                <p className="modal-card-title">Definir Valor Planejado</p>
+                <button 
+                  className="delete" 
+                  aria-label="close" 
+                  onClick={() => setShowPlannedValueModal(false)}
+                ></button>
+              </header>
+              <section className="modal-card-body">
+                {plannedValueMessages.map((msg, index) => (
+                  <Message
+                    key={index}
+                    texto={msg.texto}
+                    tipo={msg.tipo}
+                    field={msg.field ?? undefined}
+                  />
+                ))}
+                <div className="field">
+                  <label className="label">Valor Planejado</label>
+                  <div className="control">
+                    <input
+                      className="input"
+                      type="number"
+                      step="0.01"
+                      placeholder="Ex: 1500.00"
+                      value={tempPlannedValue || ""}
+                      onChange={(e) => setTempPlannedValue(Number(e.target.value))}
+                    />
+                  </div>
+                  <p className="help">Defina o valor que você planeja gastar nesta fatura</p>
+                </div>
+              </section>
+              <footer className="modal-card-foot is-justify-content-space-between">
+                <button 
+                  className="button is-danger" 
+                  onClick={() => setShowPlannedValueModal(false)}
+                >
+                  Cancelar
+                </button>
+                <button className="button is-success" onClick={handleUpdatePlannedValue}>
+                  Salvar
+                </button>
+              </footer>
+            </div>
+          </div>
+        )}
+
+        {/* Change Status Modal */}
+        {showStatusModal && (
+          <div className="modal is-active">
+            <div className="modal-background" onClick={() => setShowStatusModal(false)}></div>
+            <div className="modal-card" style={{ maxWidth: "400px" }}>
+              <header className="modal-card-head">
+                <p className="modal-card-title">Alterar Status da Fatura</p>
+                <button 
+                  className="delete" 
+                  aria-label="close" 
+                  onClick={() => setShowStatusModal(false)}
+                ></button>
+              </header>
+              <section className="modal-card-body">
+                {statusMessages.map((msg, index) => (
+                  <Message
+                    key={index}
+                    texto={msg.texto}
+                    tipo={msg.tipo}
+                    field={msg.field ?? undefined}
+                  />
+                ))}
+                <div className="field">
+                  <label className="label">Selecione o novo status</label>
+                  <div className="control">
+                    <div className="select is-fullwidth">
+                      <select
+                        value={selectedStatus}
+                        onChange={(e) => setSelectedStatus(e.target.value)}
+                        className="has-text-dark"
+                      >
+                        <option value="OPEN">OPEN - Aberta</option>
+                        <option value="CLOSED">CLOSED - Fechada</option>
+                        <option value="PENDING">PENDING - Pendente</option>
+                        <option value="PAID">PAID - Paga</option>
+                      </select>
+                    </div>
+                  </div>
+                  <p className="help">Altere o status atual da fatura</p>
+                </div>
+              </section>
+              <footer className="modal-card-foot is-justify-content-space-between">
+                <button 
+                  className="button is-danger" 
+                  onClick={() => setShowStatusModal(false)}
+                >
+                  Cancelar
+                </button>
+                <button className="button is-success" onClick={handleChangeStatus}>
+                  Confirmar
+                </button>
+              </footer>
+            </div>
+          </div>
+        )}
+
+        {/* Purchase Details Modal */}
+        {showPurchaseDetailsModal && (
+          <div className="modal is-active">
+            <div className="modal-background" onClick={() => setShowPurchaseDetailsModal(false)}></div>
+            <div className="modal-card" style={{ maxWidth: "600px" }}>
+              <header className="modal-card-head">
+                <p className="modal-card-title">Detalhes da Compra</p>
+                <button 
+                  className="delete" 
+                  aria-label="close" 
+                  onClick={() => setShowPurchaseDetailsModal(false)}
+                ></button>
+              </header>
+              <section className="modal-card-body">
+                {loadingPurchaseDetails ? (
+                  <Loader size="small" text="Carregando detalhes..." />
+                ) : purchaseDetails ? (
+                  <div>
+                    {/* Purchase Info */}
+                    <div className="mb-4">
+                      <h3 className="title is-5">{purchaseDetails.descricao}</h3>
+                      <p className="subtitle is-6 has-text-grey">
+                        {new Date(purchaseDetails.purchaseDateTime).toLocaleString("pt-BR")}
+                      </p>
+                    </div>
+
+                    <div className="columns is-mobile mb-4">
+                      <div className="column">
+                        <p className="has-text-grey-light is-size-7 mb-1">Valor Total</p>
+                        <p className="has-text-weight-bold is-size-5">
+                          {formatCurrency(purchaseDetails.value)}
+                        </p>
+                      </div>
+                      <div className="column">
+                        <p className="has-text-grey-light is-size-7 mb-1">Categoria</p>
+                        <p className="has-text-weight-bold is-size-5">
+                          {purchaseDetails.category.name}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Installments Section */}
+                    {purchaseDetails.hasIinstallment && purchaseDetails.installments.length > 0 ? (
+                      <div>
+                        <hr />
+                        <h4 className="title is-6 mb-3">Parcelas</h4>
+                        
+                        {/* Progress Bar */}
+                        <div className="mb-4">
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+                            <span className="is-size-7 has-text-weight-semibold">
+                              Pago: {formatCurrency(purchaseDetails.installmentPayd || 0)}
+                            </span>
+                            <span className="is-size-7 has-text-grey">
+                              Total: {formatCurrency(purchaseDetails.value)}
+                            </span>
+                          </div>
+                          <progress
+                            className="progress is-success"
+                            value={purchaseDetails.installmentPayd || 0}
+                            max={purchaseDetails.value}
+                          />
+                        </div>
+
+                        {/* Installments List */}
+                        <div className="table-container">
+                          <table className="table is-fullwidth is-striped">
+                            <thead>
+                              <tr>
+                                <th>Parcela</th>
+                                <th>Valor</th>
+                                <th>Vencimento</th>
+                                <th>Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {purchaseDetails.installments.map((inst) => (
+                                <tr key={inst.installmentId}>
+                                  <td>{inst.currentInstallment}/{inst.totalInstallment}</td>
+                                  <td>{formatCurrency(inst.value)}</td>
+                                  <td>{inst.invoice.dueDate}</td>
+                                  <td>
+                                    <span className={`tag ${
+                                      inst.invoice.status === 'PAID' ? 'is-success' :
+                                      inst.invoice.status === 'OPEN' ? 'is-info' :
+                                      inst.invoice.status === 'CLOSED' ? 'is-warning' :
+                                      'is-light'
+                                    }`}>
+                                      {inst.invoice.status}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ) : (
+                      /* No Installments - Just Invoice Info */
+                      purchaseDetails.invoice && (
+                        <div>
+                          <hr />
+                          <h4 className="title is-6 mb-3">Fatura</h4>
+                          <div className="box">
+                            <div className="columns is-mobile">
+                              <div className="column">
+                                <p className="has-text-grey-light is-size-7 mb-1">Vencimento</p>
+                                <p className="has-text-weight-semibold">
+                                  {purchaseDetails.invoice.dueDate}
+                                </p>
+                              </div>
+                              <div className="column">
+                                <p className="has-text-grey-light is-size-7 mb-1">Status</p>
+                                <p>
+                                  <span className={`tag ${
+                                    purchaseDetails.invoice.status === 'PAID' ? 'is-success' :
+                                    purchaseDetails.invoice.status === 'OPEN' ? 'is-info' :
+                                    purchaseDetails.invoice.status === 'CLOSED' ? 'is-warning' :
+                                    'is-light'
+                                  }`}>
+                                    {purchaseDetails.invoice.status}
+                                  </span>
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    )}
+                  </div>
+                ) : (
+                  <p className="has-text-grey">Não foi possível carregar os detalhes da compra.</p>
+                )}
+              </section>
+              <footer className="modal-card-foot is-justify-content-space-between">
+                <button 
+                  className="button is-warning"
+                  onClick={handleOpenEditPurchase}
+                >
+                  <span className="icon">
+                    <span>✏️</span>
+                  </span>
+                  <span>Editar</span>
+                </button>
+                <button 
+                  className="button" 
+                  onClick={() => setShowPurchaseDetailsModal(false)}
+                >
+                  Fechar
+                </button>
+              </footer>
+            </div>
+          </div>
+        )}
+
+        {/* Purchase Form Modal (Create/Edit) */}
+        {showPurchaseFormModal && (
+          <div className="modal is-active">
+            <div className="modal-background" onClick={() => setShowPurchaseFormModal(false)}></div>
+            <div className="modal-card" style={{ maxWidth: "500px" }}>
+              <header className="modal-card-head">
+                <p className="modal-card-title">{isEditMode ? "Editar Compra" : "Nova Compra Crédito"}</p>
+                <button 
+                  className="delete" 
+                  aria-label="close" 
+                  onClick={() => setShowPurchaseFormModal(false)}
+                ></button>
+              </header>
+              <section className="modal-card-body">
+                {purchaseFormMessages.map((msg, index) => (
+                  <Message
+                    key={index}
+                    texto={msg.texto}
+                    tipo={msg.tipo}
+                    field={msg.field ?? undefined}
+                  />
+                ))}
+                <div className="field">
+                  <label className="label">Descrição *</label>
+                  <div className="control">
+                    <input
+                      className="input"
+                      type="text"
+                      placeholder="Ex: iPhone 15"
+                      value={purchaseForm.descricao}
+                      onChange={(e) => setPurchaseForm({ ...purchaseForm, descricao: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label className="label">Cartão de Crédito *</label>
+                  <div className="control">
+                    <div className="select is-fullwidth">
+                      <select
+                        value={purchaseForm.creditCardId}
+                        onChange={(e) => setPurchaseForm({ ...purchaseForm, creditCardId: Number(e.target.value) })}
+                        disabled={isEditMode}
+                      >
+                        {creditCards.map((card) => (
+                          <option key={card.id} value={card.id}>
+                            {card.nickname} - {card.bank}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label className="label">Valor *</label>
+                  <div className="control">
+                    <input
+                      className="input"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={purchaseForm.value || ""}
+                      onChange={(e) => setPurchaseForm({ ...purchaseForm, value: Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label className="label">Parcelas</label>
+                  <div className="control">
+                    <input
+                      className="input"
+                      type="number"
+                      min="1"
+                      value={purchaseForm.totalInstallments}
+                      onChange={(e) => setPurchaseForm({ ...purchaseForm, totalInstallments: Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label className="label">Categoria *</label>
+                  <div className="control">
+                    <div className="select is-fullwidth">
+                      <select
+                        value={purchaseForm.category}
+                        onChange={(e) => setPurchaseForm({ ...purchaseForm, category: e.target.value })}
+                      >
+                        <option value="">Selecione uma categoria</option>
+                        <option value="Assinatura">Assinatura</option>
+                        <option value="Games">Games</option>
+                        <option value="Eletrônicos">Eletrônicos</option>
+                        <option value="Alimentação">Alimentação</option>
+                        <option value="Vestuário">Vestuário</option>
+                        <option value="Saúde">Saúde</option>
+                        <option value="Transporte">Transporte</option>
+                        <option value="Educação">Educação</option>
+                        <option value="Lazer">Lazer</option>
+                        <option value="Outros">Outros</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {!isEditMode && (
+                  <div className="field">
+                    <label className="label">Data e Hora da Compra *</label>
+                    <div className="control">
+                      <input
+                        className="input"
+                        type="datetime-local"
+                        value={purchaseForm.purchaseDateTime}
+                        onChange={(e) => setPurchaseForm({ ...purchaseForm, purchaseDateTime: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                )}
+              </section>
+              <footer className="modal-card-foot is-justify-content-space-between">
+                <button 
+                  className="button is-danger" 
+                  onClick={() => setShowPurchaseFormModal(false)}
+                >
+                  Cancelar
+                </button>
+                <button className="button is-success" onClick={handleSubmitPurchaseForm}>
+                  {isEditMode ? "Atualizar" : "Salvar"}
                 </button>
               </footer>
             </div>
