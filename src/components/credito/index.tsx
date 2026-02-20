@@ -110,21 +110,21 @@ export const CreditPage: React.FC = () => {
     value: 0,
   });
 
-  // Filter invoices: 2 before current + current + 7 after (max 10)
-  const filterInvoices = (invoices: Invoice[], currentInvoiceId: number): Invoice[] => {
-    const currentIndex = invoices.findIndex(inv => inv.id === currentInvoiceId);
-    if (currentIndex === -1) return invoices.slice(0, 10);
-    
-    const start = Math.max(0, currentIndex - 2);
-    const end = Math.min(invoices.length, currentIndex + 8);
-    return invoices.slice(start, end);
-  };
-
   // Switch invoice and load purchases
   const handleInvoiceSwitch = async (invoice: Invoice) => {
     setActiveInvoice(invoice);
     await loadPurchases(invoice.id);
   };
+
+  // Auto-scroll to active invoice
+  useEffect(() => {
+    if (activeInvoice) {
+      const activeButton = document.querySelector(`.invoice-button-${activeInvoice.id}`);
+      if (activeButton) {
+        activeButton.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+  }, [activeInvoice]);
 
   // Load purchases for invoice
   const loadPurchases = async (invoiceId: number) => {
@@ -560,8 +560,7 @@ export const CreditPage: React.FC = () => {
                   status: inv.status as "PENDING" | "CLOSED" | "PAID" | "OPEN"
                 }));
 
-                // Filter invoices based on currentInvoice
-                const filteredInvoices = filterInvoices(backendInvoices, c.currentInvoice);
+                // Store ALL invoices (no filtering)
                 
                 return {
                   id: c.id,
@@ -577,7 +576,7 @@ export const CreditPage: React.FC = () => {
                   userId: data.id!,
                   invoiceId: 0,
                   purchasesId: 0,
-                  invoices: filteredInvoices,
+                  invoices: backendInvoices,
                   currentInvoiceId: c.currentInvoice
                 } as CreditCard;
               }
@@ -680,6 +679,12 @@ export const CreditPage: React.FC = () => {
                       const invoiceToSelect = currentInv || card.invoices[0];
                       setActiveInvoice(invoiceToSelect);
                       loadPurchases(invoiceToSelect.id);
+                    } else {
+                      // Clear invoice and purchase data for cards with no invoices
+                      setActiveInvoice(null);
+                      setPurchases([]);
+                      setCreditPanel(null);
+                      setPlannedValue(0);
                     }
                   }}
                 >
@@ -746,6 +751,7 @@ export const CreditPage: React.FC = () => {
           <div className="columns mt-4">
             <div className="column has-text-centered">
               <PieChart
+                key={`limit-${activeCard.id}`}
                 data={[
                   { 
                     title: "Utilizado", 
@@ -809,6 +815,7 @@ export const CreditPage: React.FC = () => {
               {creditPanel.categoryPanel && creditPanel.categoryPanel.length > 0 ? (
                 <>
                   <PieChart
+                    key={`category-${activeCard.id}-${activeInvoice?.id || 'no-invoice'}`}
                     data={creditPanel.categoryPanel.map((cat, index) => ({
                       title: cat.category,
                       value: cat.value,
@@ -855,6 +862,7 @@ export const CreditPage: React.FC = () => {
 
             <div className="column has-text-centered">
               <PieChart
+                key={`installments-${activeCard.id}-${activeInvoice?.id || 'no-invoice'}`}
                 data={[
                   { 
                     title: "Pagas", 
@@ -918,26 +926,84 @@ export const CreditPage: React.FC = () => {
 
         {/* --- Invoice Section --- */}
         {activeInvoice && (
-          <div className="box mb-5">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
-              <h3 className="title is-6 mb-0">Fatura</h3>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-                {activeCard?.invoices?.map(inv => (
-                  <button
-                    key={inv.id}
-                    className={`button is-small ${inv.id === activeInvoice.id ? "is-info" : ""}`}
-                    onClick={() => handleInvoiceSwitch(inv)}
-                  >
-                    {inv.dueDate.slice(5, 7)}/{inv.dueDate.slice(0, 4)}
-                  </button>
-                ))}
-              </div>
+          <>
+            <hr />
+            <div style={{ marginBottom: "1rem", marginTop: "2rem" }}>
+              <h2 className="subtitle is-size-6 mb-0">Fatura</h2>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem", marginTop: "1.5rem" }}>
-              <div>
-                <p>Vencimento: {activeInvoice.dueDate}</p>
-                <p>Status: {activeInvoice.status}</p>
+            
+            <div className="box mb-5">
+              {/* Invoice List with Arrows */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.5rem", marginBottom: "1rem" }}>
+                <button 
+                  className="button is-small"
+                  onClick={() => {
+                    const container = document.querySelector('.invoice-scroll-container');
+                    if (container) container.scrollBy({ left: -200, behavior: 'smooth' });
+                  }}
+                  title="Rolar para esquerda"
+                >
+                  ◀
+                </button>
+                
+                <style>{`
+                  .invoice-scroll-container::-webkit-scrollbar {
+                    display: none;
+                  }
+                `}</style>
+                <div 
+                  className="invoice-scroll-container"
+                  style={{ 
+                    display: "flex", 
+                    gap: "0.5rem",
+                    overflowX: "auto",
+                    maxWidth: "400px",
+                    scrollBehavior: "smooth",
+                    padding: "0.25rem",
+                    WebkitOverflowScrolling: "touch",
+                    scrollbarWidth: "none",
+                    msOverflowStyle: "none"
+                  }}>
+                  {activeCard?.invoices?.map(inv => {
+                    const currentYear = new Date().getFullYear();
+                    const invoiceYear = parseInt(inv.dueDate.slice(0, 4));
+                    const isDifferentYear = invoiceYear !== currentYear;
+                    
+                    return (
+                      <button
+                        key={inv.id}
+                        className={`button is-small invoice-button-${inv.id} ${inv.id === activeInvoice.id ? "is-info" : isDifferentYear ? "is-light" : ""}`}
+                        onClick={() => handleInvoiceSwitch(inv)}
+                        style={{ 
+                          minWidth: "80px",
+                          flex: "0 0 auto",
+                          whiteSpace: "nowrap",
+                          opacity: isDifferentYear && inv.id !== activeInvoice.id ? 0.6 : 1
+                        }}
+                      >
+                        {inv.dueDate.slice(5, 7)}/{inv.dueDate.slice(0, 4)}
+                      </button>
+                    );
+                  })}
+                </div>
+                
+                <button 
+                  className="button is-small"
+                  onClick={() => {
+                    const container = document.querySelector('.invoice-scroll-container');
+                    if (container) container.scrollBy({ left: 200, behavior: 'smooth' });
+                  }}
+                  title="Rolar para direita"
+                >
+                  ▶
+                </button>
               </div>
+              
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+                <div>
+                  <p>Vencimento: {activeInvoice.dueDate}</p>
+                  <p>Status: {activeInvoice.status}</p>
+                </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 <button 
                   className="button is-small is-info"
@@ -990,72 +1056,80 @@ export const CreditPage: React.FC = () => {
                 } as React.CSSProperties}
               />
             </div>
-          </div>
+            </div>
+          </>
         )}
 
         {/* --- Invoice / Extrato --- */}
-        <hr />
-        <div className="table-container mt-5">
-          <div style={{ marginBottom: "2rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-              <h2 className="subtitle is-size-6 mb-0">Extrato</h2>
-              <button 
-                className="button is-success is-small"
-                onClick={handleOpenCreatePurchase}
-                title="Adicionar nova compra"
-              >
-                <span className="icon">
-                  <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>+</span>
-                </span>
-                <span className="is-hidden-mobile">Nova Compra</span>
-              </button>
-            </div>
-            {loadingPurchases ? (
-              <div className="box">
-                <Loader size="small" text="Carregando compras..." />
+        {activeCard && (
+          <>
+            <div className="table-container mt-5">
+              <div style={{ marginBottom: "2rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                  <h2 className="subtitle is-size-6 mb-0">Extrato</h2>
+                  <button 
+                    className="button is-success is-small"
+                    onClick={handleOpenCreatePurchase}
+                    title="Adicionar nova compra"
+                  >
+                    <span className="icon">
+                      <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>+</span>
+                    </span>
+                    <span className="is-hidden-mobile">Nova Compra</span>
+                  </button>
+                </div>
+                {activeInvoice && (
+                  <>
+                    {loadingPurchases ? (
+                      <div className="box">
+                        <Loader size="small" text="Carregando compras..." />
+                      </div>
+                    ) : (
+                      <ResponsiveTable
+                        columns={[
+                          { key: "descricao", label: "DESCRIÇÃO" },
+                          { key: "valor", label: "VALOR", render: (v) => formatCurrency(v) },
+                          { key: "parcela", label: "Parcelas" },
+                          { key: "vencimento", label: "VENCIMENTO" },
+                          { key: "classificacao", label: "CATEGORIA" },
+                          { 
+                            key: "acoes", 
+                            label: "AÇÕES",
+                            render: (_v, item: any) => (
+                              <button 
+                                className="button is-small is-info"
+                                onClick={() => handleViewPurchaseDetails(item.purchaseId)}
+                                title="Ver detalhes"
+                              >
+                                <span className="icon">
+                                  <span>👁️</span>
+                                </span>
+                              </button>
+                            )
+                          },
+                        ]}
+                        items={purchases.map(p => ({
+                          purchaseId: p.purchaseId,
+                          descricao: p.descricao,
+                          valor: p.installment ? p.installment.value : p.value,
+                          parcela: p.installment 
+                            ? `${p.installment.currentInstallment}/${p.installment.totalInstallment}` 
+                            : "-",
+                          vencimento: activeInvoice?.dueDate || "-",
+                          classificacao: p.category || "-",
+                          acoes: null
+                        }))}
+                        calcTotal={(items) => items.reduce((sum, i) => sum + (i.valor ?? 0), 0)}
+                        highlightPaid={false}
+                        showPaidColumn={false}
+                      />
+                    )}
+                  </>
+                )}
               </div>
-            ) : (
-              <ResponsiveTable
-                columns={[
-                  { key: "descricao", label: "DESCRIÇÃO" },
-                  { key: "valor", label: "VALOR", render: (v) => formatCurrency(v) },
-                  { key: "parcela", label: "Parcelas" },
-                  { key: "vencimento", label: "VENCIMENTO" },
-                  { key: "classificacao", label: "CATEGORIA" },
-                  { 
-                    key: "acoes", 
-                    label: "AÇÕES",
-                    render: (_v, item: any) => (
-                      <button 
-                        className="button is-small is-info"
-                        onClick={() => handleViewPurchaseDetails(item.purchaseId)}
-                        title="Ver detalhes"
-                      >
-                        <span className="icon">
-                          <span>👁️</span>
-                        </span>
-                      </button>
-                    )
-                  },
-                ]}
-                items={purchases.map(p => ({
-                  purchaseId: p.purchaseId,
-                  descricao: p.descricao,
-                  valor: p.installment ? p.installment.value : p.value,
-                  parcela: p.installment 
-                    ? `${p.installment.currentInstallment}/${p.installment.totalInstallment}` 
-                    : "-",
-                  vencimento: activeInvoice?.dueDate || "-",
-                  classificacao: p.category || "-",
-                  acoes: null
-                }))}
-                calcTotal={(items) => items.reduce((sum, i) => sum + (i.valor ?? 0), 0)}
-                highlightPaid={false}
-                showPaidColumn={false}
-              />
-            )}
-          </div>
-        </div>
+            </div>
+          </>
+        )}
 
         {/* Add Credit Card Modal */}
         {showAddCardModal && (
