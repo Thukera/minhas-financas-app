@@ -262,6 +262,16 @@ export const usePanelService = () => {
         }
     };
 
+    const deletePurchase = async (purchaseId: number): Promise<boolean> => {
+        try {
+            await httpClient.post(`${creditCardPurchaseEndpoint}/delete/${purchaseId}`, {});
+            return true;
+        } catch (error) {
+            console.error("Failed to delete purchase", error);
+            return false;
+        }
+    };
+
     return {
         getUserDetails,
         getInvoiceDetails,
@@ -273,6 +283,7 @@ export const usePanelService = () => {
         changeInvoiceStatus,
         getPurchaseDetails,
         updatePurchase,
-        updateCreditCard
+        updateCreditCard,
+        deletePurchase
     }
 }

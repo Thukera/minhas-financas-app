@@ -13,6 +13,7 @@ import { usePanelService, Purchase, CreateCreditCardRequest, UpdateCreditCardReq
 import { Alert, Message } from "../common/message";
 import { creditCardValidationSchema, CreditCardFormData } from "@/lib/validations";
 import { Loader } from "../common/loader";
+import { MoneyInput } from "../common/moneyinput";
 import { getAuthRedirectDelay } from '@/lib/utils/config';
 import { useFormValidation } from '@/hooks/useFormValidation';
 
@@ -33,7 +34,7 @@ const getCategoryColor = (index: number): string => {
 export const CreditPage: React.FC = () => {
   const router = useRouter();
   const { user, isLoading: userLoading } = useUser();
-  const { getUserDetails, getInvoiceDetails, getCreditCardDetails, createCreditCard, updateInvoiceEstimateLimit, changeInvoiceStatus, getPurchaseDetails, createCreditCardPurchase, updatePurchase, updateCreditCard } = usePanelService();
+  const { getUserDetails, getInvoiceDetails, getCreditCardDetails, createCreditCard, updateInvoiceEstimateLimit, changeInvoiceStatus, getPurchaseDetails, createCreditCardPurchase, updatePurchase, updateCreditCard, deletePurchase } = usePanelService();
 
   const [loading, setLoading] = useState(true);
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
@@ -51,6 +52,7 @@ export const CreditPage: React.FC = () => {
   const [plannedValueMessages, setPlannedValueMessages] = useState<Array<Alert>>([]);
   const [statusMessages, setStatusMessages] = useState<Array<Alert>>([]);
   const [purchaseFormMessages, setPurchaseFormMessages] = useState<Array<Alert>>([]);
+  const [deleteConfirmMessages, setDeleteConfirmMessages] = useState<Array<Alert>>([]);
 
   // Real-time validation for credit card form
   const cardValidation = useFormValidation<CreditCardFormData>({
@@ -72,6 +74,8 @@ export const CreditPage: React.FC = () => {
   const [showPurchaseFormModal, setShowPurchaseFormModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingPurchaseId, setEditingPurchaseId] = useState<number | null>(null);
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [deletingPurchaseId, setDeletingPurchaseId] = useState<number | null>(null);
 
   // Credit card form state
   const [cardForm, setCardForm] = useState({
@@ -479,6 +483,52 @@ export const CreditPage: React.FC = () => {
     }
   };
 
+  // Handle open delete confirmation
+  const handleOpenDeleteConfirm = () => {
+    if (!purchaseDetails) return;
+    
+    setDeletingPurchaseId(purchaseDetails.purchaseId);
+    setDeleteConfirmMessages([]);
+    setShowPurchaseDetailsModal(false);
+    setShowDeleteConfirmModal(true);
+  };
+
+  // Handle delete purchase
+  const handleDeletePurchase = async () => {
+    if (!deletingPurchaseId) return;
+    
+    setDeleteConfirmMessages([]);
+    
+    try {
+      const success = await deletePurchase(deletingPurchaseId);
+      if (success) {
+        setDeleteConfirmMessages([{
+          tipo: "success",
+          texto: "Compra excluída com sucesso!"
+        }]);
+        // Reload purchases after brief delay to show success message
+        setTimeout(async () => {
+          if (activeInvoice) {
+            await loadPurchases(activeInvoice.id);
+          }
+          setShowDeleteConfirmModal(false);
+          setDeletingPurchaseId(null);
+        }, 1500);
+      } else {
+        setDeleteConfirmMessages([{
+          tipo: "danger",
+          texto: "Erro ao excluir compra. Tente novamente."
+        }]);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setDeleteConfirmMessages([{
+        tipo: "danger",
+        texto: "Um erro inesperado aconteceu, tente novamente mais tarde."
+      }]);
+    }
+  };
+
   useEffect(() => {
     const signed = localStorage.getItem("signed") === "true";
     if (!signed) {
@@ -711,7 +761,7 @@ export const CreditPage: React.FC = () => {
                 lineWidth={25}
                 style={{ maxWidth: "360px", margin: "30px" }}
                 animate={true}
-                label={({ dataEntry }) => `${dataEntry.title}: ${formatCurrency(dataEntry.value)}`}
+                //label={({ dataEntry }) => `${dataEntry.title}: ${formatCurrency(dataEntry.value)}`}
                 labelStyle={{
                   fontSize: "5px",
                   fill: "#fff",
@@ -719,9 +769,40 @@ export const CreditPage: React.FC = () => {
                 labelPosition={70}
               />
               <p className="mt-2 has-text-weight-semibold">Limite Total</p>
-              <p className="is-size-7 has-text-grey-light">
-                {formatCurrency(creditPanel.usedLimit)} / {formatCurrency(creditPanel.totalLimit)}
-              </p>
+              <div className="is-size-7 has-text-grey-light" style={{ maxWidth: "250px", margin: "0 auto" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "0.2rem 0" }}>
+                  <span style={{ display: "flex", alignItems: "center" }}>
+                    <span 
+                      style={{ 
+                        width: "10px", 
+                        height: "10px", 
+                        backgroundColor: "#eb1212ff",
+                        display: "inline-block",
+                        marginRight: "0.5rem",
+                        borderRadius: "2px"
+                      }}
+                    />
+                    Utilizado
+                  </span>
+                  <span>{formatCurrency(creditPanel.usedLimit)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "0.2rem 0" }}>
+                  <span style={{ display: "flex", alignItems: "center" }}>
+                    <span 
+                      style={{ 
+                        width: "10px", 
+                        height: "10px", 
+                        backgroundColor: "#54eb36ff",
+                        display: "inline-block",
+                        marginRight: "0.5rem",
+                        borderRadius: "2px"
+                      }}
+                    />
+                    Disponível
+                  </span>
+                  <span>{formatCurrency(Math.max(creditPanel.totalLimit - creditPanel.usedLimit, 0))}</span>
+                </div>
+              </div>
             </div>
 
             <div className="column has-text-centered">
@@ -736,7 +817,7 @@ export const CreditPage: React.FC = () => {
                     lineWidth={25}
                     style={{ maxWidth: "360px", margin: "30px" }}
                     animate={true}
-                    label={({ dataEntry }) => `${dataEntry.title}: ${formatCurrency(dataEntry.value)}`}
+                    //label={({ dataEntry }) => `${dataEntry.title}: ${formatCurrency(dataEntry.value)}`}
                     labelStyle={{
                       fontSize: "5px",
                       fill: "#fff",
@@ -789,7 +870,7 @@ export const CreditPage: React.FC = () => {
                 lineWidth={25}
                 style={{ maxWidth: "360px", margin: "30px" }}
                 animate={true}
-                label={({ dataEntry }) => `${dataEntry.title}: ${formatCurrency(dataEntry.value)}`}
+                //label={({ dataEntry }) => `${dataEntry.title}: ${formatCurrency(dataEntry.value)}`}
                 labelStyle={{
                   fontSize: "5px",
                   fill: "#fff",
@@ -797,9 +878,40 @@ export const CreditPage: React.FC = () => {
                 labelPosition={70}
               />
               <p className="mt-2 has-text-weight-semibold">Parcelas</p>
-              <p className="is-size-7 has-text-grey-light">
-                {formatCurrency(creditPanel.paydInstallments)} / {formatCurrency(creditPanel.totalInstallments)}
-              </p>
+              <div className="is-size-7 has-text-grey-light" style={{ maxWidth: "250px", margin: "0 auto" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "0.2rem 0" }}>
+                  <span style={{ display: "flex", alignItems: "center" }}>
+                    <span 
+                      style={{ 
+                        width: "10px", 
+                        height: "10px", 
+                        backgroundColor: "#36a2eb",
+                        display: "inline-block",
+                        marginRight: "0.5rem",
+                        borderRadius: "2px"
+                      }}
+                    />
+                    Pagas
+                  </span>
+                  <span>{formatCurrency(creditPanel.paydInstallments)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "0.2rem 0" }}>
+                  <span style={{ display: "flex", alignItems: "center" }}>
+                    <span 
+                      style={{ 
+                        width: "10px", 
+                        height: "10px", 
+                        backgroundColor: "#ff6384",
+                        display: "inline-block",
+                        marginRight: "0.5rem",
+                        borderRadius: "2px"
+                      }}
+                    />
+                    Pendentes
+                  </span>
+                  <span>{formatCurrency(Math.max(creditPanel.totalInstallments - creditPanel.paydInstallments, 0))}</span>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -1013,21 +1125,17 @@ export const CreditPage: React.FC = () => {
                   {cardValidation.errors?.endNumbers && <p className="help is-danger">{cardValidation.errors.endNumbers}</p>}
                 </div>
 
-                <div className="field">
-                  <label className="label">Limite Total *</label>
-                  <div className="control">
-                    <input
-                      className={`input ${cardValidation.errors?.totalLimit ? 'is-danger' : ''}`}
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={cardForm.totalLimit || ""}
-                      onChange={(e) => handleCardFieldChange('totalLimit', Number(e.target.value))}
-                      onBlur={(e) => handleCardFieldBlur('totalLimit', Number(e.target.value))}
-                    />
-                  </div>
-                  {cardValidation.errors?.totalLimit && <p className="help is-danger">{cardValidation.errors.totalLimit}</p>}
-                </div>
+                <MoneyInput
+                  id="card-total-limit"
+                  label="Limite Total *"
+                  value={cardForm.totalLimit}
+                  onChange={(value) => {
+                    handleCardFieldChange('totalLimit', value);
+                  }}
+                  onBlur={() => handleCardFieldBlur('totalLimit', cardForm.totalLimit)}
+                  error={cardValidation.errors?.totalLimit}
+                  placeholder="0,00"
+                />
 
                 <div className="columns">
                   <div className="column">
@@ -1160,34 +1268,22 @@ export const CreditPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="field">
-                  <label className="label">Limite Total *</label>
-                  <div className="control">
-                    <input
-                      className="input"
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={editCardForm.totalLimit || ""}
-                      onChange={(e) => setEditCardForm({ ...editCardForm, totalLimit: Number(e.target.value) })}
-                    />
-                  </div>
-                </div>
+                <MoneyInput
+                  id="edit-card-total-limit"
+                  label="Limite Total *"
+                  value={editCardForm.totalLimit}
+                  onChange={(value) => setEditCardForm({ ...editCardForm, totalLimit: value })}
+                  placeholder="0,00"
+                />
 
-                <div className="field">
-                  <label className="label">Limite Estimado para Faturas</label>
-                  <div className="control">
-                    <input
-                      className="input"
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={editCardForm.estimateLimitForinvoices || ""}
-                      onChange={(e) => setEditCardForm({ ...editCardForm, estimateLimitForinvoices: Number(e.target.value) })}
-                    />
-                  </div>
-                  <p className="help">Valor estimado de limite para uso em faturas</p>
-                </div>
+                <MoneyInput
+                  id="edit-card-estimate-limit"
+                  label="Limite Estimado para Faturas"
+                  value={editCardForm.estimateLimitForinvoices}
+                  onChange={(value) => setEditCardForm({ ...editCardForm, estimateLimitForinvoices: value })}
+                  placeholder="0,00"
+                />
+                <p className="help">Valor estimado de limite para uso em faturas</p>
 
                 <div className="columns">
                   <div className="column">
@@ -1274,20 +1370,14 @@ export const CreditPage: React.FC = () => {
                     field={msg.field ?? undefined}
                   />
                 ))}
-                <div className="field">
-                  <label className="label">Valor Planejado</label>
-                  <div className="control">
-                    <input
-                      className="input"
-                      type="number"
-                      step="0.01"
-                      placeholder="Ex: 1500.00"
-                      value={tempPlannedValue || ""}
-                      onChange={(e) => setTempPlannedValue(Number(e.target.value))}
-                    />
-                  </div>
-                  <p className="help">Defina o valor que você planeja gastar nesta fatura</p>
-                </div>
+                <MoneyInput
+                  id="planned-value"
+                  label="Valor Planejado"
+                  value={tempPlannedValue}
+                  onChange={(value) => setTempPlannedValue(value)}
+                  placeholder="Ex: 1.500,00"
+                />
+                <p className="help">Defina o valor que você planeja gastar nesta fatura</p>
               </section>
               <footer className="modal-card-foot is-justify-content-space-between">
                 <button 
@@ -1495,15 +1585,26 @@ export const CreditPage: React.FC = () => {
                 )}
               </section>
               <footer className="modal-card-foot is-justify-content-space-between">
-                <button 
-                  className="button is-warning"
-                  onClick={handleOpenEditPurchase}
-                >
-                  <span className="icon">
-                    <span>✏️</span>
-                  </span>
-                  <span>Editar</span>
-                </button>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <button 
+                    className="button is-warning"
+                    onClick={handleOpenEditPurchase}
+                  >
+                    <span className="icon">
+                      <span>✏️</span>
+                    </span>
+                    <span>Editar</span>
+                  </button>
+                  <button 
+                    className="button is-danger"
+                    onClick={handleOpenDeleteConfirm}
+                  >
+                    <span className="icon">
+                      <span>🗑️</span>
+                    </span>
+                    <span>Excluir</span>
+                  </button>
+                </div>
                 <button 
                   className="button" 
                   onClick={() => setShowPurchaseDetailsModal(false)}
@@ -1569,19 +1670,13 @@ export const CreditPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="field">
-                  <label className="label">Valor *</label>
-                  <div className="control">
-                    <input
-                      className="input"
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={purchaseForm.value || ""}
-                      onChange={(e) => setPurchaseForm({ ...purchaseForm, value: Number(e.target.value) })}
-                    />
-                  </div>
-                </div>
+                <MoneyInput
+                  id="purchase-value"
+                  label="Valor *"
+                  value={purchaseForm.value}
+                  onChange={(value) => setPurchaseForm({ ...purchaseForm, value })}
+                  placeholder="0,00"
+                />
 
                 <div className="field">
                   <label className="label">Parcelas</label>
@@ -1643,6 +1738,76 @@ export const CreditPage: React.FC = () => {
                 </button>
                 <button className="button is-success" onClick={handleSubmitPurchaseForm}>
                   {isEditMode ? "Atualizar" : "Salvar"}
+                </button>
+              </footer>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirmModal && (
+          <div className="modal is-active">
+            <div className="modal-background" onClick={() => setShowDeleteConfirmModal(false)}></div>
+            <div className="modal-card" style={{ maxWidth: "450px" }}>
+              <header className="modal-card-head has-background-danger">
+                <p className="modal-card-title has-text-white">Confirmar Exclusão</p>
+                <button 
+                  className="delete" 
+                  aria-label="close" 
+                  onClick={() => setShowDeleteConfirmModal(false)}
+                ></button>
+              </header>
+              <section className="modal-card-body">
+                {deleteConfirmMessages.map((msg, index) => (
+                  <Message
+                    key={index}
+                    texto={msg.texto}
+                    tipo={msg.tipo}
+                    field={msg.field ?? undefined}
+                  />
+                ))}
+                <div className="notification is-warning is-light">
+                  <p className="has-text-weight-semibold mb-3">
+                    <span className="icon-text">
+                      <span className="icon">
+                        <span>⚠️</span>
+                      </span>
+                      <span>Atenção!</span>
+                    </span>
+                  </p>
+                  <p>Você tem certeza que deseja excluir esta compra?</p>
+                  <p className="mt-2">Esta ação não pode ser desfeita.</p>
+                </div>
+                {purchaseDetails && (
+                  <div className="box mt-4">
+                    <p className="has-text-weight-semibold">{purchaseDetails.descricao}</p>
+                    <p className="has-text-grey">
+                      Valor: {purchaseDetails.value.toLocaleString("pt-BR", { 
+                        style: "currency", 
+                        currency: "BRL" 
+                      })}
+                    </p>
+                    <p className="has-text-grey is-size-7">
+                      Data: {new Date(purchaseDetails.purchaseDateTime).toLocaleString("pt-BR")}
+                    </p>
+                  </div>
+                )}
+              </section>
+              <footer className="modal-card-foot is-justify-content-space-between">
+                <button 
+                  className="button" 
+                  onClick={() => setShowDeleteConfirmModal(false)}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  className="button is-danger"
+                  onClick={handleDeletePurchase}
+                >
+                  <span className="icon">
+                    <span>🗑️</span>
+                  </span>
+                  <span>Confirmar Exclusão</span>
                 </button>
               </footer>
             </div>

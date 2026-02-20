@@ -9,6 +9,7 @@ import { usePanelService, CreatePurchaseRequest, CreateSubscriptionRequest } fro
 import { useUser } from "@/context/userContext";
 import { Alert, Message } from "../common/message";
 import { getAuthRedirectDelay } from '@/lib/utils/config';
+import { MoneyInput } from "../common/moneyinput";
 
 interface ModalProps {
   isOpen: boolean;
@@ -338,19 +339,13 @@ export const ComprasPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="field">
-            <label className="label">Valor *</label>
-            <div className="control">
-              <input
-                className="input"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={purchaseForm.value || ""}
-                onChange={(e) => setPurchaseForm({ ...purchaseForm, value: Number(e.target.value) })}
-              />
-            </div>
-          </div>
+          <MoneyInput
+            id="purchase-value"
+            label="Valor *"
+            value={purchaseForm.value}
+            onChange={(value) => setPurchaseForm({ ...purchaseForm, value })}
+            placeholder="0,00"
+          />
 
           <div className="field">
             <label className="label">Parcelas</label>
@@ -440,19 +435,13 @@ export const ComprasPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="field">
-            <label className="label">Valor Mensal *</label>
-            <div className="control">
-              <input
-                className="input"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={subscriptionForm.value || ""}
-                onChange={(e) => setSubscriptionForm({ ...subscriptionForm, value: Number(e.target.value) })}
-              />
-            </div>
-          </div>
+          <MoneyInput
+            id="subscription-value"
+            label="Valor Mensal *"
+            value={subscriptionForm.value}
+            onChange={(value) => setSubscriptionForm({ ...subscriptionForm, value })}
+            placeholder="0,00"
+          />
 
           <div className="notification is-info is-light">
             <p><strong>Categoria:</strong> Assinatura</p>
