@@ -1536,7 +1536,7 @@ export const CreditPage: React.FC = () => {
                                       inst.invoice.status === 'PAID' ? 'is-success' :
                                       inst.invoice.status === 'OPEN' ? 'is-info' :
                                       inst.invoice.status === 'CLOSED' ? 'is-warning' :
-                                      'is-light'
+                                      'is-primary'
                                     }`}>
                                       {inst.invoice.status}
                                     </span>
@@ -1568,7 +1568,7 @@ export const CreditPage: React.FC = () => {
                                     purchaseDetails.invoice.status === 'PAID' ? 'is-success' :
                                     purchaseDetails.invoice.status === 'OPEN' ? 'is-info' :
                                     purchaseDetails.invoice.status === 'CLOSED' ? 'is-warning' :
-                                    'is-light'
+                                    'is-primary'
                                   }`}>
                                     {purchaseDetails.invoice.status}
                                   </span>
@@ -1606,7 +1606,7 @@ export const CreditPage: React.FC = () => {
                   </button>
                 </div>
                 <button 
-                  className="button" 
+                  className="button is-primary" 
                   onClick={() => setShowPurchaseDetailsModal(false)}
                 >
                   Fechar
