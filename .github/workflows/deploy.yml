@@ -27,7 +27,7 @@ jobs:
           
           # Build Docker image
           docker build \
-            --build-arg NEXT_PUBLIC_API_URL=https://api.hardman.app.br \
+            --build-arg NEXT_PUBLIC_API_URL=https://api-finances.hardman.app.br \
             -t my-finances-frontend:latest .
           
           # Stop old container
