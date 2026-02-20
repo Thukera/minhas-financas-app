@@ -4,8 +4,8 @@
   "description": "Aplicativo completo para gestão de finanças pessoais, cartões de crédito e contas domésticas",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#667eea",
-  "theme_color": "#667eea",
+  "background_color": "#404040",
+  "theme_color": "#404040",
   "orientation": "portrait-primary",
   "scope": "/",
   "icons": [
