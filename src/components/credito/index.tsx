@@ -16,6 +16,7 @@ import { Loader } from "../common/loader";
 import { MoneyInput } from "../common/moneyinput";
 import { getAuthRedirectDelay } from '@/lib/utils/config';
 import { useFormValidation } from '@/hooks/useFormValidation';
+import { processSyncQueue } from '@/lib/sync';
 
 // helper
 const formatCurrency = (v: number) =>
@@ -613,6 +614,22 @@ export const CreditPage: React.FC = () => {
 
     loadCards();
   }, [user]);
+
+  // Sync offline changes when component loads
+  useEffect(() => {
+    const initSync = async () => {
+      if (navigator.onLine) {
+        console.log('🔄 Verificando itens pendentes para sincronizar...');
+        try {
+          await processSyncQueue();
+        } catch (error) {
+          console.error('Erro ao processar fila de sincronização:', error);
+        }
+      }
+    };
+    
+    initSync();
+  }, []);
 
   if (loading || userLoading) {
     return (

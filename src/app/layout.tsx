@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import 'bulma/css/bulma.min.css';
 import "@/styles/global.scss";
 import { UserProvider } from "@/context/userContext";
+import { ConnectionStatus } from "@/components/common/ConnectionStatus";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,7 +30,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#667eea",
+  themeColor: "#2f2f31",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
@@ -48,6 +49,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        <ConnectionStatus />
         <UserProvider>{children}</UserProvider>
       </body>
     </html>
