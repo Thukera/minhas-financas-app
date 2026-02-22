@@ -1,121 +1,93 @@
-import { openDB, DBSchema, IDBPDatabase } from 'idb';
+import { openDB, IDBPDatabase } from 'idb';
 
 /**
  * Schema do IndexedDB para MinhasFinancas App
  * Armazena dados localmente para funcionalidade offline
  */
-interface MinhasFinancasDB extends DBSchema {
-  // Cartões de crédito
-  creditCards: {
-    key: number;
-    value: {
-      id: number;
-      bank: string;
-      nickname: string;
-      endNumbers: string;
-      dueDate: number;
-      billingPeriodStart: number;
-      billingPeriodEnd: number;
-      totalLimit: number;
-      usedLimit: number;
-      invoices?: any[];
-      synced: boolean;
-      updatedAt: string;
-    };
-    indexes: { 'by-synced': boolean };
-  };
 
-  // Faturas
-  invoices: {
-    key: number;
-    value: {
-      id: number;
-      invoiceId: number;
-      startDate: string;
-      endDate: string;
-      dueDate: string;
-      status: string;
-      totalAmount: number;
-      estimateLimit?: number | null;
-      creditcard: any;
-      creditPanel: any;
-      purchases: any[];
-      synced: boolean;
-      updatedAt: string;
-    };
-    indexes: { 'by-card': number; 'by-synced': boolean };
-  };
+// Define types for your data
+type CreditCard = {
+  id: number;
+  bank: string;
+  nickname: string;
+  endNumbers: string;
+  dueDate: number;
+  billingPeriodStart: number;
+  billingPeriodEnd: number;
+  totalLimit: number;
+  usedLimit: number;
+  invoices?: any[];
+  synced: boolean;
+  updatedAt: string;
+};
 
-  // Compras
-  purchases: {
-    key: number;
-    value: {
-      purchaseId: number;
-      descricao: string;
-      value: number;
-      purchaseDateTime: string;
-      category: string;
-      creditCardId: number;
-      invoiceId?: number;
-      totalInstallments?: number;
-      installment?: any;
-      synced: boolean;
-      updatedAt: string;
-    };
-    indexes: { 'by-invoice': number; 'by-card': number; 'by-synced': boolean };
-  };
+type Invoice = {
+  id: number;
+  invoiceId: number;
+  startDate: string;
+  endDate: string;
+  dueDate: string;
+  status: string;
+  totalAmount: number;
+  estimateLimit?: number | null;
+  creditcard: any;
+  creditPanel: any;
+  purchases: any[];
+  synced: boolean;
+  updatedAt: string;
+};
 
-  // Detalhes de compras (para modal)
-  purchaseDetails: {
-    key: number;
-    value: {
-      purchaseId: number;
-      data: any;
-      synced: boolean;
-      updatedAt: string;
-    };
-  };
+type Purchase = {
+  purchaseId: number;
+  descricao: string;
+  value: number;
+  purchaseDateTime: string;
+  category: string;
+  creditCardId: number;
+  invoiceId?: number;
+  totalInstallments?: number;
+  installment?: any;
+  synced: boolean;
+  updatedAt: string;
+};
 
-  // Dados do usuário
-  user: {
-    key: string;
-    value: {
-      id: string;
-      data: any;
-      synced: boolean;
-      updatedAt: string;
-    };
-  };
+type PurchaseDetail = {
+  purchaseId: number;
+  data: any;
+  synced: boolean;
+  updatedAt: string;
+};
 
-  // Fila de sincronização
-  syncQueue: {
-    key: number;
-    value: {
-      id?: number;
-      type: 'CREATE' | 'UPDATE' | 'DELETE';
-      entity: 'purchase' | 'card' | 'invoice' | 'subscription' | 'user';
-      endpoint: string;
-      payload: any;
-      timestamp: number;
-      synced: boolean;
-      retryCount: number;
-      lastError?: string;
-    };
-    indexes: { 'by-synced': boolean; 'by-entity': string };
-  };
-}
+type UserData = {
+  id: string;
+  data: any;
+  synced: boolean;
+  updatedAt: string;
+};
 
-let dbInstance: IDBPDatabase<MinhasFinancasDB> | null = null;
+type SyncQueueItem = {
+  id?: number;
+  type: 'CREATE' | 'UPDATE' | 'DELETE';
+  entity: 'purchase' | 'card' | 'invoice' | 'subscription' | 'user';
+  endpoint: string;
+  payload: any;
+  timestamp: number;
+  synced: boolean;
+  retryCount: number;
+  lastError?: string;
+};
+
+let dbInstance: IDBPDatabase | null = null;
 
 /**
  * Obtém ou cria a instância do banco de dados IndexedDB
  */
-export const getDB = async (): Promise<IDBPDatabase<MinhasFinancasDB>> => {
+export const getDB = async (): Promise<IDBPDatabase> => {
   if (dbInstance) return dbInstance;
 
   console.log('📦 Inicializando IndexedDB...');
 
-  dbInstance = await openDB<MinhasFinancasDB>('minhas-financas-db', 1, {
+  dbInstance = await openDB('minhas-financas-db', 1, {
     upgrade(db) {
       // Credit Cards Store
       if (!db.objectStoreNames.contains('creditCards')) {
@@ -211,7 +183,9 @@ export const getDBStats = async () => {
     db.count('syncQueue'),
   ]);
 
-  const pendingSync = await db.countFromIndex('syncQueue', 'by-synced', false);
+  // Contar itens pendentes manualmente
+  const allSyncItems = await db.getAll('syncQueue');
+  const pendingSync = allSyncItems.filter((item: SyncQueueItem) => !item.synced).length;
 
   return {
     creditCards: creditCardsCount,

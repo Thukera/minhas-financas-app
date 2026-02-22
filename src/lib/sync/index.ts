@@ -195,7 +195,8 @@ const syncItem = async (item: any): Promise<void> => {
  */
 export const getCurrentSyncStatus = async (): Promise<SyncStatus> => {
   const db = await getDB();
-  const pendingItems = await db.countFromIndex('syncQueue', 'by-synced', false);
+  const allItems = await db.getAll('syncQueue');
+  const pendingItems = allItems.filter((item: any) => !item.synced).length;
 
   return {
     isSyncing,
