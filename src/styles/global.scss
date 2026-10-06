@@ -3,6 +3,15 @@
 :root {
   --color-sky-light: #FAF7F3;
   --color-sky-dark: #F4EDE4;
+  --color-brand-green: #657a5a;
+  --color-brand-green-dark: #4f6246;
+  --color-brand-text: #2f3e2a;
+  --color-brand-title: #2f3e2a;
+  --color-brand-content: #3b4637;
+  --color-brand-surface: rgba(255, 254, 250, 0.95);
+  --color-brand-table-head: rgba(101, 122, 90, 0.14);
+  --color-brand-table-stripe: rgba(101, 122, 90, 0.07);
+  --color-brand-table-hover: rgba(101, 122, 90, 0.12);
 }
 
 body {
@@ -17,6 +26,99 @@ body {
   background-size: auto, cover;
   background-attachment: fixed, fixed;
   min-height: 100vh;
+}
+
+.card,
+.box,
+.modal-card-head,
+.modal-card-body,
+.modal-card-foot {
+  background-color: var(--color-brand-surface);
+  color: var(--color-brand-content);
+}
+
+.card.has-background-dark {
+  background-color: var(--color-brand-surface) !important;
+}
+
+.card-header-title,
+.modal-card-title,
+.title {
+  color: var(--color-brand-title);
+}
+
+.subtitle {
+  color: var(--color-brand-content);
+}
+
+.card-content .content,
+.modal-card-body,
+.box {
+  color: var(--color-brand-content);
+}
+
+.card.has-background-dark .card-header-title {
+  color: var(--color-brand-title) !important;
+}
+
+.card.has-background-dark .card-content .content.has-text-white {
+  color: var(--color-brand-content) !important;
+}
+
+.box.has-background-dark,
+.has-background-dark:not(.card):not(.box) {
+  background-color: var(--color-brand-green-dark) !important;
+}
+
+.box.has-background-white-ter {
+  background-color: var(--color-brand-surface) !important;
+}
+
+.modal-card-head,
+.modal-card-foot {
+  border-color: rgba(47, 62, 42, 0.14);
+}
+
+.modal-card-title {
+  color: var(--color-brand-title);
+}
+
+.table {
+  background-color: var(--color-brand-surface) !important;
+  color: var(--color-brand-content) !important;
+}
+
+.table th,
+.table td {
+  border-color: rgba(47, 62, 42, 0.14);
+  color: var(--color-brand-content) !important;
+}
+
+.table thead th,
+.table tfoot th,
+.table tfoot td {
+  background-color: var(--color-brand-table-head);
+  color: var(--color-brand-title) !important;
+}
+
+.table.is-striped tbody tr:not(.is-selected):not(.has-background-primary-25):nth-child(even) {
+  background-color: var(--color-brand-table-stripe) !important;
+}
+
+.table.is-hoverable tbody tr:not(.is-selected):hover {
+  background-color: var(--color-brand-table-hover) !important;
+}
+
+.button:not(.is-danger):not(.is-warning):not(.is-text):not(.is-ghost) {
+  background-color: var(--color-brand-green) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+}
+
+.button:not(.is-danger):not(.is-warning):not(.is-text):not(.is-ghost):hover,
+.button:not(.is-danger):not(.is-warning):not(.is-text):not(.is-ghost):focus {
+  background-color: var(--color-brand-green-dark) !important;
+  color: #fff !important;
 }
 
 .background-corners {
