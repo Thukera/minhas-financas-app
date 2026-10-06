@@ -251,23 +251,26 @@ export const LoginForm: React.FC = () => {
     };
 
     return (
-        <section className="section is-flex is-align-items-center is-justify-content-center">
-            <div className="login-box box has-background-dark " >
+        <section className="section login-page is-flex is-flex-direction-column is-align-items-center is-justify-content-center">
+            <div className="login-brand has-text-centered">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img className="logo-login" src="/LogoV2.png" alt="Minhas Finanças" />
+                {/* <h1 className="login-title">Minhas <strong>Finanças</strong></h1>*/}
+                <h1 className="login-title">Minhas Finanças</h1>
+                <p className="login-subtitle">Mais controle, mais futuro</p>
+            </div>
 
-                <div className="has-text-centered mb-4 ">
-                    {/* <img className="logo-login" src="logo.png" alt="logo">  */}
-                    <h1 className="title is-4 login-title">Minhas Finanças</h1>
-                </div>
+            <div className="login-box box">
 
                 <form onSubmit={handleSubmit}>
                     <div className="field">
                         <div className="control">
                             <Input id='inputLogin'
-                                label='Login'
+                                label='Usuário'
                                 //columnClasses='is-half'
                                 onChange={setUsername}
                                 value={username}
-                                placeholder="username"
+                                placeholder="Digite seu usuário"
                                 error={errors?.username}
                             />
                         </div>
@@ -276,11 +279,11 @@ export const LoginForm: React.FC = () => {
                     <div className="field">
                         <div className="control">
                             <Input id='inputpassword'
-                                label='Password'
+                                label='Senha'
                                 //columnClasses='is-half'
                                 onChange={setpassword}
                                 value={password}
-                                placeholder="password here"
+                                placeholder="Digite sua senha"
                                 error={errors?.password}
                                 type='password'
                             />
@@ -290,9 +293,9 @@ export const LoginForm: React.FC = () => {
                     <div className="field is-flex is-justify-content-space-between is-align-items-center">
                         <label className="checkbox">
                             <input id="rememberMe" type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
-                            Remember me
+                            Lembrar-me
                         </label>
-                        <a href="#" className="is-link-text is-size-7">Forgot?</a>
+                        <a href="#" className="is-link-text is-size-7">Esqueceu?</a>
                     </div>
 
                     <div className="field mt-4">
@@ -302,7 +305,7 @@ export const LoginForm: React.FC = () => {
                             className={`button is-fullwidth login-button ${isSubmitting ? 'is-loading' : ''}`}
                             disabled={isSubmitting}
                         >
-                            Sign in
+                            Entrar
                         </button>
                     </div>
 
@@ -317,7 +320,7 @@ export const LoginForm: React.FC = () => {
                 </form>
 
                 <p className="has-text-centered is-size-7 mt-4">
-                    Don’t have an account?
+                    Não tem uma conta?
                     <a 
                         href="#" 
                         className="is-link-text has-text-weight-semibold"
@@ -325,7 +328,7 @@ export const LoginForm: React.FC = () => {
                             e.preventDefault();
                             setShowSignupModal(true);
                         }}
-                    > Sign up</a>
+                    > Cadastre-se</a>
                 </p>
             </div>
 

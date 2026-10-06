@@ -1,45 +1,101 @@
 /* src/styles/login.scss */
 
+:root {
+  --color-brand-green: #657a5a;
+  --color-brand-green-dark: #4f6246;
+  --color-brand-text: #2f3e2a;
+}
+
+.login-page {
+  background: url('/background.png') center / cover no-repeat fixed;
+  background-repeat: repeat;
+  background-size: auto;
+  padding: 1.5rem;
+}
+
+.login-brand {
+  margin-bottom: 2rem;
+}
+
 .login-box {
-  background: rgba(255, 255, 255, 0.966);
+  background: rgba(255, 254, 250, 0.95);
   border-radius: 1rem;
   padding: 2rem;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 30px rgba(60, 50, 20, 0.18), 0 2px 6px rgba(60, 50, 20, 0.08);
 
   width: 100%;
   max-width: 400px;
 }
 
 .login-title {
-  color: #f8f6f6;
-  font-weight: 600 !important; /* or whatever value you want */
-  
+  color: var(--color-brand-text);
+  font-size: 2.4rem;
+  font-weight: 400;
+  line-height: 1.1;
+
+  strong {
+    font-weight: 700;
+  }
+}
+
+.login-subtitle {
+  margin-top: 0.5rem;
+  color: var(--color-brand-text);
+  font-size: 0.8rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
 }
 
 div.control label.label {
-  color: #f8f6f6 !important;
+  color: var(--color-brand-text) !important;
 }
 
 .login-button {
-  background-color: var(--color-sky-light);
+  background-color: var(--color-brand-green);
+  border-color: transparent;
   color: white;
   transition: background-color 0.3s ease;
 }
 
 .login-button:hover {
-  background-color: var(--color-sky-dark);
+  background-color: var(--color-brand-green-dark);
   color: white;
 }
 
 .is-link-text {
-  color: var(--color-sky-light);
+  color: var(--color-brand-text);
+}
+
+.login-box .checkbox {
+  color: var(--color-brand-text);
+}
+
+.login-box p.is-size-7 {
+  color: var(--color-brand-text);
 }
 
 .logo-login {
-  width: 96px;
-  height: 96px;
+  width: 160px;
+  height: 160px;
   object-fit: contain;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.0rem;
+}
+
+.modal-card {
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(60, 50, 20, 0.3);
+}
+
+.modal-card .button.is-success,
+.modal-card .button.is-primary {
+  background-color: var(--color-brand-green);
+  color: white;
+}
+
+.modal-card .button.is-success:hover,
+.modal-card .button.is-primary:hover {
+  background-color: var(--color-brand-green-dark);
 }
 
 /* Section styling replicating inline style and Bulma flex utilities */
