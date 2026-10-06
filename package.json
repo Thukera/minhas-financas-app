@@ -19,7 +19,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-minimal-pie-chart": "^9.1.1",
-    "sass": "^1.89.2",
+    "sass": "^1.105.1",
     "scss": "^0.2.4",
     "swr": "^2.3.4",
     "workbox-window": "^7.4.0",

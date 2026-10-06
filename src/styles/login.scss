@@ -7,9 +7,6 @@
 }
 
 .login-page {
-  background: url('/background.png') center / cover no-repeat fixed;
-  background-repeat: repeat;
-  background-size: auto;
   padding: 1.5rem;
 }
 
@@ -75,8 +72,8 @@ div.control label.label {
 }
 
 .logo-login {
-  width: 160px;
-  height: 160px;
+  width: 180px;
+  height: 180px;
   object-fit: contain;
   margin-bottom: 0.0rem;
 }

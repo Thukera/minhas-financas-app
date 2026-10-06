@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import Image from "next/image";
+import cornerArtwork from "../../public/background_corner.png";
 import { Geist, Geist_Mono } from "next/font/google";
 import 'bulma/css/bulma.min.css';
 import "@/styles/global.scss";
@@ -49,6 +51,12 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        <div className="background-corners" aria-hidden="true">
+          <Image className="corner top-left" src={cornerArtwork} alt="" draggable={false} />
+          <Image className="corner top-right" src={cornerArtwork} alt="" draggable={false} />
+          <Image className="corner bottom-left" src={cornerArtwork} alt="" draggable={false} />
+          <Image className="corner bottom-right" src={cornerArtwork} alt="" draggable={false} />
+        </div>
         <ConnectionStatus />
         <UserProvider>{children}</UserProvider>
       </body>

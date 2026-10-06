@@ -6,7 +6,63 @@
 }
 
 body {
-  background: linear-gradient(135deg, var(--color-sky-light), var(--color-sky-dark));
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
+  background-image:
+    url('/Background.png'),
+    linear-gradient(135deg, var(--color-sky-light), var(--color-sky-dark));
+  background-repeat: repeat, no-repeat;
+  background-position: center, center;
+  background-size: auto, cover;
+  background-attachment: fixed, fixed;
   min-height: 100vh;
+}
+
+.background-corners {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.background-corners .corner {
+  position: absolute;
+  display: block;
+  width: clamp(7rem, 22vw, 21rem);
+  max-width: 44vw;
+  max-height: 44vh;
+  height: auto;
+  object-fit: contain;
+}
+
+.background-corners .top-left {
+  top: -2vw;
+  left: -2vw;
+  transform: rotate(180deg);
+}
+
+.background-corners .top-right {
+  top: -2vw;
+  right: -2vw;
+  transform: scaleY(-1);
+}
+
+.background-corners .bottom-left {
+  bottom: -2vw;
+  left: -2vw;
+  transform: scaleX(-1);
+}
+
+.background-corners .bottom-right {
+  right: -2vw;
+  bottom: -2vw;
+}
+
+@media (max-width: 600px) {
+  .background-corners .corner {
+    width: clamp(6rem, 30vw, 12rem);
+  }
 }
 
